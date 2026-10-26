@@ -1,3 +1,6 @@
+# ── WSL/Ubuntu 侧依赖（主程序：B站/QQ/知识库/论文）──
+# 另需系统包（论文入库功能用）：sudo apt install poppler-utils
+# Windows 侧只跑桌宠 GUI，见 tools/requirements.txt
 bilibili-api-python>=17.0.0
 requests>=2.31.0
 curl_cffi

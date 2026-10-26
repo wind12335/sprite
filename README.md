@@ -51,6 +51,7 @@ git clone https://github.com/wind12335/sprite.git
 cd sprite
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
+sudo apt install poppler-utils   # 论文入库功能用（pdftotext 提取 PDF 文本）
 ```
 
 ### 2. 配置模型（任意 OpenAI 兼容厂商）

@@ -1,0 +1,4 @@
+# Windows 侧依赖（只有桌宠 GUI 一个程序）：Windows Python 直接
+#   pip install -r tools/requirements.txt
+# 其余全部功能都在 WSL/Ubuntu 侧执行，见根目录 requirements.txt
+pillow>=10.0
