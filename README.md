@@ -130,7 +130,7 @@ crontab -e
 */5 * * * * ~/workspace/sprite/scripts/napcat_watchdog.sh >> /dev/null 2>&1
 ```
 
-更多（systemd、启动复盘、FAQ）见 [docs/STARTUP.md](docs/STARTUP.md)；全部 CLI 命令见 [docs/USAGE.md](docs/USAGE.md)。
+更多（systemd、启动复盘、FAQ）见 [docs/STARTUP.md](docs/STARTUP.md)；全部 CLI 命令见 [docs/USAGE.md](docs/USAGE.md)。 更新计划与人设包演进设计见 [docs/ROADMAP.md](docs/ROADMAP.md)。
 
 ## 人设包（换名字换性格，一行配置）
 
