@@ -115,7 +115,8 @@ NapCat 是 QQ 的 OneBot v11 实现，sprite 通过 WebSocket 与它通信。按
 
 - **左键点一下头像**：展开控制面板；**长按拖动**：挪位置；**右键**：菜单；**Esc**：收起
 - 换形象：放 `avatar.gif` 或 `avatar.png` 到仓库 `tools/` 下，重启 widget
-- 标题栏名字取自 `config.toml [persona].name`——QQ 人设叫什么，桌宠就叫什么
+- 标题栏名字取自人设（`[persona].name` 或人设包）——QQ 人设叫什么，桌宠就叫什么
+- **状态表情**：干活中=橙色●+默认脸星眼冒汗，出错=红色●+哭脸；用自定义头像时状态条照样提示。按下头像会"陷一下"作为点击反馈
 - 排查看 `D:\widget.log`（含 400ms 粒度窗口状态飞行记录）
 
 ### 7. 定时任务（可选）
@@ -129,6 +130,17 @@ crontab -e
 ```
 
 更多（systemd、启动复盘、FAQ）见 [docs/STARTUP.md](docs/STARTUP.md)；全部 CLI 命令见 [docs/USAGE.md](docs/USAGE.md)。
+
+## 人设包（换名字换性格，一行配置）
+
+`personas/` 目录下每个 toml 就是一套人设（name + system_prompt）：
+
+```toml
+[persona]
+file = "personas/deepseek_whale.toml"   # 换成大肥鱼；留空则用内联人设
+```
+
+内置 `zhipu_girl.toml`（智谱娘）和 `deepseek_whale.toml`（大肥鱼）两个示例；自己照抄一份改两行就是新角色。桌宠标题栏的名字会自动跟着人设走。
 
 ## 路径与账号变量
 
@@ -181,6 +193,7 @@ sprite/
 │   ├── mind/             #   知识库（TF-IDF）+ 记忆/人设
 │   └── housekeep.py      #   MemGPT式保洁：会话归档/日志轮转/配额提醒
 ├── tools/                # Windows侧工具（桌宠 GUI）
+├── personas/            # 人设包（一行配置换角色）
 ├── assets/              # 图标等资源
 ├── docs/                # 深入文档（STARTUP/USAGE）
 ├── scripts/            # start/stop/status + NapCat看门狗

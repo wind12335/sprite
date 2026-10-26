@@ -68,7 +68,11 @@ start_widget() {
   pwd > /mnt/d/sprite_dir.txt
   echo "$NAPCAT_DIR" > /mnt/d/napcat_dir.txt
   # 桌宠标题栏名字 = config.toml [persona].name（缺省 sprite）
-  grep -A5 '^\[persona\]' config.toml 2>/dev/null | grep '^name' | head -1 \
+  # 桌宠标题栏名字：优先人设包([persona].file)里的 name，回退内联 name，再回退 sprite
+  PFILE=$(grep -A5 '^\[persona\]' config.toml 2>/dev/null | grep '^file' | head -1 | sed 's/.*= *"\([^"]*\)".*/\1/')
+  NAME_SRC=config.toml
+  if [ -n "$PFILE" ] && [ -f "$PFILE" ]; then NAME_SRC="$PFILE"; fi
+  grep '^name' "$NAME_SRC" 2>/dev/null | head -1 \
     | sed 's/.*= *"\([^"]*\)".*/\1/' > /mnt/d/widget_name.txt
   [ -s /mnt/d/widget_name.txt ] || echo "sprite" > /mnt/d/widget_name.txt
   [ -f tools/avatar.gif ] && cp tools/avatar.gif /mnt/d/avatar.gif

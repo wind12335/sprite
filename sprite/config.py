@@ -116,6 +116,19 @@ def load_config() -> dict:
         for section, values in user_cfg.items():
             cfg.setdefault(section, {}).update(values)
 
+    # 人设包：[persona].file 指向 personas/xxx.toml，包内非空键覆盖内联值
+    pfile_val = cfg["persona"].get("file", "")
+    if pfile_val:
+        pfile = (ROOT / pfile_val).resolve()
+        if pfile.exists():
+            with open(pfile, "rb") as f:
+                pack = tomllib.load(f)
+            for k, v in pack.items():
+                if v:
+                    cfg["persona"][k] = v
+        else:
+            print(f"⚠️ 人设包不存在：{pfile}，回退 [persona] 内联配置")
+
     # 环境变量优先于配置文件中的密钥
     env_key = os.environ.get("GLM_API_KEY")
     if env_key:

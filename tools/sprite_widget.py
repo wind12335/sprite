@@ -1,4 +1,4 @@
-"""sprite 桌宠 v19 —— 修复HERE定义顺序(部署文件读取无声失败) —— 持久界面切换（不销毁重建） 单实例改用锁文件+PID存活检查（端口表被WSL镜像网络污染不可信）。"""
+"""sprite 桌宠 v20 —— 状态表情(干活/出错)+点击反馈+人设包名 —— 修复HERE定义顺序(部署文件读取无声失败) —— 持久界面切换（不销毁重建） 单实例改用锁文件+PID存活检查（端口表被WSL镜像网络污染不可信）。"""
 import os
 import queue
 import socket
@@ -95,29 +95,56 @@ DEFAULT_IMG = HERE / "sprite_avatar.png"
 
 
 def make_default():
-    """生成两帧：睁眼 + 眨眼。"""
-    if DEFAULT_IMG.exists(): return
+    """生成默认表情帧：睁眼/眨眼/干活(星眼+汗滴)/出错(哭)，逐帧已存在则跳过。"""
     from PIL import ImageDraw
-    for name, blink in [("sprite_avatar.png", False), ("sprite_avatar_blink.png", True)]:
+
+    def base():
         img = Image.new("RGB", (200, 200), (250, 240, 255))
         d = ImageDraw.Draw(img)
         d.ellipse([25, 15, 175, 165], fill=(255, 228, 225), outline=(216, 112, 147), width=4)
-        if blink:
-            d.line([60, 72, 85, 72], fill=(60,50,60), width=4)
-            d.line([115, 72, 140, 72], fill=(60,50,60), width=4)
-        else:
-            d.ellipse([60, 60, 85, 88], fill=(60,50,60)); d.ellipse([115, 60, 140, 88], fill=(60,50,60))
-            d.ellipse([66, 66, 79, 79], fill=(255,255,255)); d.ellipse([121, 66, 134, 79], fill=(255,255,255))
-        d.arc([75, 88, 125, 125], 15, 165, fill=(220, 100, 120), width=4)
         d.ellipse([38, 85, 62, 108], fill=(255, 190, 190)); d.ellipse([138, 85, 162, 108], fill=(255, 190, 190))
-        img.save(HERE / name)
+        return img, d
+
+    out = HERE / "sprite_avatar.png"
+    if not out.exists():
+        img, d = base()
+        d.ellipse([60, 60, 85, 88], fill=(60,50,60)); d.ellipse([115, 60, 140, 88], fill=(60,50,60))
+        d.ellipse([66, 66, 79, 79], fill=(255,255,255)); d.ellipse([121, 66, 134, 79], fill=(255,255,255))
+        d.arc([75, 88, 125, 125], 15, 165, fill=(220, 100, 120), width=4)
+        img.save(out)
+    out = HERE / "sprite_avatar_blink.png"
+    if not out.exists():
+        img, d = base()
+        d.line([60, 72, 85, 72], fill=(60,50,60), width=4); d.line([115, 72, 140, 72], fill=(60,50,60), width=4)
+        d.arc([75, 88, 125, 125], 15, 165, fill=(220, 100, 120), width=4)
+        img.save(out)
+    out = HERE / "sprite_avatar_working.png"
+    if not out.exists():
+        img, d = base()  # 星星眼 + 汗滴 + O型嘴
+        d.polygon([(60,74),(70,62),(80,74),(70,86)], fill=(255,170,40))
+        d.polygon([(115,74),(125,62),(135,74),(125,86)], fill=(255,170,40))
+        d.polygon([(60,74),(70,66),(80,74),(70,82)], fill=(255,235,150))
+        d.polygon([(115,74),(125,66),(135,74),(125,82)], fill=(255,235,150))
+        d.ellipse([92, 92, 108, 112], fill=(220, 100, 120))
+        d.polygon([(152,30),(164,44),(156,46),(148,34)], fill=(120,190,240))  # 汗滴
+        img.save(out)
+    out = HERE / "sprite_avatar_error.png"
+    if not out.exists():
+        img, d = base()  # 闭眼哭 + 泪滴 + 撇嘴
+        d.arc([58, 62, 88, 84], 20, 160, fill=(60,50,60), width=4)
+        d.arc([113, 62, 143, 84], 20, 160, fill=(60,50,60), width=4)
+        d.arc([75, 112, 125, 148], 195, 345, fill=(220, 100, 120), width=4)
+        d.polygon([(88,92),(98,106),(90,108),(82,96)], fill=(120,190,240))  # 泪滴
+        img.save(out)
 
 
 class AvatarAnimator:
-    """管理头像动画帧（GIF帧循环 或 PNG呼吸+眨眼）。"""
+    """管理头像动画帧（GIF帧循环 或 PNG表情帧），按状态(idle/working/error)切帧组。"""
     def __init__(self, root):
         self.root = root
-        self.frames = []       # [(PhotoImage, duration_ms), ...]
+        self.frames = []       # 兼容旧引用：当前idle帧组
+        self.variants = {}     # {状态: [(PhotoImage, duration_ms), ...]}
+        self.variant = "idle"
         self.frame_idx = 0
         self.bob_offset = 0    # 上下浮动偏移
         self.bob_direction = 1
@@ -131,19 +158,40 @@ class AvatarAnimator:
             self._load_png(DEFAULT_IMG, blink=True)
 
     def _load_gif(self):
+        frames = []
         gif = Image.open(CUSTOM_GIF)
         for frame in ImageSequence.Iterator(gif):
             duration = frame.info.get("duration", 100) or 100
-            self.frames.append((self._photo(frame), duration))
-        _log(f"已加载GIF头像（{len(self.frames)}帧）")
+            frames.append((self._photo(frame), duration))
+        self.variants["idle"] = frames
+        self.frames = frames
+        _log(f"已加载GIF头像（{len(frames)}帧）")
 
     def _load_png(self, path, blink=False):
-        img = Image.open(path)
-        self.frames.append((self._photo(img), 3000))  # 常态 3秒
-        if blink:
-            blink_img = Image.open(path.parent / "sprite_avatar_blink.png")
-            self.frames.append((self._photo(blink_img), 150))  # 眨眼 0.15秒
-        _log(f"已加载PNG头像（{'带眨眼' if blink else '静态'}）")
+        p = path.parent
+        normal = (self._photo(Image.open(path)), 3000)
+        if not blink:
+            self.variants["idle"] = [normal]
+            self.frames = [normal]
+            _log("已加载PNG头像（静态）")
+            return
+        blink_f = (self._photo(Image.open(p / "sprite_avatar_blink.png")), 150)
+        self.variants["idle"] = [normal, blink_f]
+        self.frames = self.variants["idle"]
+        work_png, err_png = p / "sprite_avatar_working.png", p / "sprite_avatar_error.png"
+        if work_png.exists() and err_png.exists():
+            self.variants["working"] = [(self._photo(Image.open(work_png)), 650), normal]
+            self.variants["error"] = [(self._photo(Image.open(err_png)), 3000)]
+            _log("已加载PNG头像（睁眼/眨眼/干活/出错 四态）")
+        else:
+            _log("已加载PNG头像（带眨眼）")
+
+    def set_variant(self, name):
+        """切换状态帧组；自定义头像没有专属帧组时自动回退idle帧。"""
+        frames = self.variants.get(name) or self.variants.get("idle") or []
+        if frames:
+            self.variant = name
+            self.frame_idx = 0
 
     @staticmethod
     def _photo(pil_img):
@@ -155,15 +203,20 @@ class AvatarAnimator:
         canvas.paste(pil_img, ((side - w) // 2, (side - h) // 2))
         return ImageTk.PhotoImage(canvas.resize((DISPLAY_SIZE, DISPLAY_SIZE), Image.LANCZOS))
 
+    def _active(self):
+        return self.variants.get(self.variant) or self.variants.get("idle") or []
+
     def next_frame(self):
-        if not self.frames: return None, 3000
-        self.frame_idx = (self.frame_idx + 1) % len(self.frames)
-        img, dur = self.frames[self.frame_idx]
+        frames = self._active()
+        if not frames: return None, 3000
+        self.frame_idx = (self.frame_idx + 1) % len(frames)
+        img, dur = frames[self.frame_idx]
         return img, dur
 
     def current(self):
-        if not self.frames: return None, 3000
-        img, dur = self.frames[self.frame_idx]
+        frames = self._active()
+        if not frames: return None, 3000
+        img, dur = frames[self.frame_idx]
         return img, dur
 
 
@@ -178,11 +231,13 @@ class Widget:
         self.drag = {"x": 0, "y": 0, "moved": False}
         self.animator = AvatarAnimator(self.root)
         self.mode = "collapsed"
-        self._cur_w, self._cur_h = 100, 100
+        self.state = "idle"            # idle / working / error
+        self._nudged = False
+        self._cur_w, self._cur_h = 100, 124
 
         self._build_ui()  # 两套界面只建一次，永不销毁（杜绝切换白屏竞态）
         sw = self.root.winfo_screenwidth(); sh = self.root.winfo_screenheight()
-        self.root.geometry(f"100x100+{sw-130}+{sh-220}")
+        self.root.geometry(f"100x124+{sw-130}+{sh-220}")
 
         # 部署自测钩子：存在标记文件则3秒后自动展开（供无GUI环境验证渲染）
         if (HERE / "widget_autotest").exists():
@@ -203,7 +258,10 @@ class Widget:
         self.collapsed_frame = tk.Frame(self.root, bg=BG, bd=2, relief="solid", cursor="hand2")
         self.avatar_small = tk.Label(self.collapsed_frame, image=img, bg=BG, cursor="hand2")
         self.avatar_small.image = img  # 防GC：引用挂长生命周期属性
-        self.avatar_small.pack(padx=3, pady=3)
+        self.avatar_small.pack(padx=3, pady=(3, 0))
+        self.status_strip = tk.Label(self.collapsed_frame, text="● 待命",
+                                     font=("Microsoft YaHei UI", 9), bg=BG, fg="#66BB6A")
+        self.status_strip.pack(pady=(0, 4))
         for w in [self.collapsed_frame, self.avatar_small]:
             # 点击/拖拽分离：按下记录、移动超阈值=拖窗、松开未拖动=点击展开
             w.bind("<ButtonPress-1>", self._drag_start)
@@ -222,6 +280,12 @@ class Widget:
         self.avatar_label.pack(side="left", padx=4, pady=2)
         tk.Label(header, text=f" {PET_NAME} ✨", font=("Microsoft YaHei UI", 11, "bold"),
                  bg="#e8d5f0", fg="#6a2a8a").pack(side="left")
+        self.status_dot = tk.Label(header, text="●", bg="#e8d5f0", fg="#66BB6A",
+                                   font=("Microsoft YaHei UI", 10))
+        self.status_dot.pack(side="left")
+        self.status_text = tk.Label(header, text="待命", bg="#e8d5f0", fg="#66BB6A",
+                                    font=("Microsoft YaHei UI", 9))
+        self.status_text.pack(side="left")
         tk.Button(header, text="✕", command=self._quit,
                   font=("Microsoft YaHei UI", 9, "bold"), bg="#e57373", fg="white",
                   relief="flat", cursor="hand2", bd=0, padx=6
@@ -304,10 +368,12 @@ class Widget:
     def _show(self, label, text):
         # 登录过期提示只对QQ启动类任务触发，避免误杀其他输出
         if label == "QQ启动" and ("未就绪" in text or "掉线" in text):
+            self._set_state("error")
             # 先同步给占位提示，输出区绝不停留在空白
             self._show_text("⚠️ 检测到QQ登录态过期！\n正在读取WebUI Token…")
             self._handle_login_expired()
             return
+        self._set_state("error" if (text.startswith("错误") or text.startswith("⚠️")) else "idle")
         self._show_text(f"[{label}]\n{text}")
 
     def _show_text(self, msg):
@@ -386,6 +452,7 @@ class Widget:
             self.output_area.config(state="disabled")
 
     def _run(self, cmd, label, timeout=120):
+        self._set_state("working")
         if not SPRITE_DIR:
             self.results.put((label,
                 "⚠️ 未找到部署路径文件 sprite_dir.txt。\n"
@@ -417,11 +484,13 @@ class Widget:
     def _collapsed(self):
         """收起：隐藏面板、显示小窗。不销毁任何控件。"""
         self.mode = "collapsed"
-        self._cur_w, self._cur_h = 100, 100
+        self.state = "idle"            # idle / working / error
+        self._nudged = False
+        self._cur_w, self._cur_h = 100, 124
         self.expanded_frame.pack_forget()
         self.collapsed_frame.pack(fill="both", expand=True, padx=2, pady=2)
         self.root.minsize(0, 0)
-        self.root.geometry(f"100x100+{self.root.winfo_x()}+{self.root.winfo_y()}")
+        self.root.geometry(f"100x124+{self.root.winfo_x()}+{self.root.winfo_y()}")
 
     def _expand(self):
         """展开：显示面板、隐藏小窗。不销毁不重建，从机制上杜绝切换白屏。"""
@@ -500,10 +569,36 @@ class Widget:
         else:
             self._expand()
 
+    STATE_META = {"idle": ("● 待命", "#66BB6A"), "working": ("● 干活中…", "#FFA726"),
+                  "error": ("● 出错了", "#EF5350")}
+
+    def _set_state(self, state):
+        """状态驱动：表情帧组 + 收起态状态条 + 展开态状态点。"""
+        self.state = state
+        self.animator.set_variant(state)
+        txt, fg = self.STATE_META[state]
+        if hasattr(self, "status_strip"):
+            self.status_strip.config(text=txt, fg=fg)
+        if hasattr(self, "status_text"):
+            self.status_text.config(text=txt.replace("● ", ""), fg=fg)
+            self.status_dot.config(fg=fg)
+
+    def _nudge(self, dy):
+        """点击反馈：整个窗体下沉dy像素再弹回，任何头像通用。"""
+        try:
+            self.root.geometry(f"+{self.root.winfo_x()}+{self.root.winfo_y() + dy}")
+        except tk.TclError:
+            pass
+
     def _drag_start(self, e):
         self.drag = {"x": e.x, "y": e.y, "moved": False}
+        if self.mode == "collapsed" and not self._nudged:
+            self._nudged = True
+            self._nudge(3)
 
     def _drag_move(self, e):
+        if self._nudged:
+            self._nudge(-3); self._nudged = False
         # 记录是否发生了真实拖动（用于区分"点击"与"拖拽"）
         if abs(e.x - self.drag["x"]) + abs(e.y - self.drag["y"]) > 6:
             self.drag["moved"] = True
@@ -518,6 +613,8 @@ class Widget:
 
     def _release_expand(self, e):
         """收起态松开鼠标：没拖动过就是点击 → 展开。"""
+        if self._nudged:
+            self._nudge(-3); self._nudged = False
         if not self.drag.get("moved"):
             self._expand()
 
@@ -529,5 +626,5 @@ if __name__ == "__main__":
         _r = tk.Tk(); _r.withdraw()
         _mb.showinfo("sprite 桌宠", "桌宠已经在运行了（看看屏幕右下角）。\n本次启动自动退出。")
         sys.exit(0)
-    _log(f"桌宠启动 v19 部署环境: SPRITE_DIR={SPRITE_DIR!r} NAPCAT_DIR={NAPCAT_DIR!r} PET_NAME={PET_NAME!r}")
+    _log(f"桌宠启动 v20 部署环境: SPRITE_DIR={SPRITE_DIR!r} NAPCAT_DIR={NAPCAT_DIR!r} PET_NAME={PET_NAME!r}")
     Widget()
