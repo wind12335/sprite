@@ -145,9 +145,13 @@ class AvatarAnimator:
 
     @staticmethod
     def _photo(pil_img):
-        """统一缩放到显示尺寸，原始200px图不至于撑爆窗口。"""
-        pil_img = pil_img.convert("RGBA").resize((DISPLAY_SIZE, DISPLAY_SIZE), Image.LANCZOS)
-        return ImageTk.PhotoImage(pil_img)
+        """先补成正方形再缩放到显示尺寸：非方形图不会被硬拉变形。"""
+        pil_img = pil_img.convert("RGBA")
+        w, h = pil_img.size
+        side = max(w, h)
+        canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+        canvas.paste(pil_img, ((side - w) // 2, (side - h) // 2))
+        return ImageTk.PhotoImage(canvas.resize((DISPLAY_SIZE, DISPLAY_SIZE), Image.LANCZOS))
 
     def next_frame(self):
         if not self.frames: return None, 3000
