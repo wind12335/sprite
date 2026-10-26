@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="tools/sprite_icon.png" width="180" alt="sprite"/>
+  <img src="assets/sprite_icon.png" width="180" alt="sprite"/>
 </p>
 
 <h1 align="center">sprite ✨</h1>
@@ -99,18 +99,18 @@ NapCat 是 QQ 的 OneBot v11 实现，sprite 通过 WebSocket 与它通信。按
 ### 5. 一键启停
 
 ```bash
-./start.sh bili    # B站侧常驻（每2小时：搜索→筛选→解析→动态/评论）
-./start.sh qq      # QQ侧：自动拉 NapCat 并等就绪 → 智谱娘上线
-./start.sh widget  # 部署并启动 Windows 桌宠（自动停旧实例）
-./start.sh all     # bili + qq
+./scripts/start.sh bili    # B站侧常驻（每2小时：搜索→筛选→解析→动态/评论）
+./scripts/start.sh qq      # QQ侧：自动拉 NapCat 并等就绪 → 智谱娘上线
+./scripts/start.sh widget  # 部署并启动 Windows 桌宠（自动停旧实例）
+./scripts/start.sh all     # bili + qq
 
-./stop.sh all      # 全停；也可 ./stop.sh qq / ./stop.sh bili
-./status.sh        # 各进程/端口状态
+./scripts/stop.sh all      # 全停；也可 ./scripts/stop.sh qq / ./scripts/stop.sh bili
+./scripts/status.sh        # 各进程/端口状态
 ```
 
 ### 6. Windows 桌宠（可选但强烈推荐）
 
-`./start.sh widget` 把 `tools/sprite_widget.py` 部署到 `D:\` 并用 Windows Python 启动（默认 `D:\anaconda3\python.exe` 且装有 pillow，路径不同改 `start.sh` 对应行）。
+`./scripts/start.sh widget` 把 `tools/sprite_widget.py` 部署到 `D:\` 并用 Windows Python 启动（默认 `D:\anaconda3\python.exe` 且装有 pillow，路径不同改 `start.sh` 对应行）。
 
 - **左键点一下头像**：展开控制面板；**长按拖动**：挪位置；**右键**：菜单；**Esc**：收起
 - 换形象：放 `avatar.gif` 或 `avatar.png` 到仓库 `tools/` 下，重启 widget
@@ -124,10 +124,10 @@ crontab -e
 # 每2小时跑一轮B站情报
 0 */2 * * * cd ~/workspace/sprite && .venv/bin/python -u main.py watch --once >> run.log 2>&1
 # NapCat 看门狗：掉线自动拉起
-*/5 * * * * ~/workspace/sprite/tools/napcat_watchdog.sh >> /dev/null 2>&1
+*/5 * * * * ~/workspace/sprite/scripts/napcat_watchdog.sh >> /dev/null 2>&1
 ```
 
-更多（systemd、启动复盘、FAQ）见 [STARTUP.md](STARTUP.md)；全部 CLI 命令见 [USAGE.md](USAGE.md)。
+更多（systemd、启动复盘、FAQ）见 [docs/STARTUP.md](docs/STARTUP.md)；全部 CLI 命令见 [docs/USAGE.md](docs/USAGE.md)。
 
 ## 路径与账号变量
 
@@ -179,8 +179,10 @@ sprite/
 │   ├── qq/               #   QQ：onebot客户端 + 人设适配器
 │   ├── mind/             #   知识库（TF-IDF）+ 记忆/人设
 │   └── housekeep.py      #   MemGPT式保洁：会话归档/日志轮转/配额提醒
-├── tools/                # 桌宠 GUI + NapCat 看门狗
-├── start.sh / stop.sh / status.sh
+├── tools/                # Windows侧工具（桌宠 GUI）
+├── assets/              # 图标等资源
+├── docs/                # 深入文档（STARTUP/USAGE）
+├── scripts/            # start/stop/status + NapCat看门狗
 └── data/                 # 运行时数据（gitignore，凭据/记忆/报告）
 ```
 

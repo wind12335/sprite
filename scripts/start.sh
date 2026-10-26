@@ -4,7 +4,7 @@
 #       ./start.sh bili —— 启动B站侧（watch 常驻：搜视频/发动态/评论/楼中楼社交）
 #       ./start.sh all  —— 两侧都启动
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 # 可通过环境变量覆盖：NAPCAT_DIR(NapCat安装目录) BOT_QQ(机器人小号,快速登录用)
 NAPCAT_DIR="${NAPCAT_DIR:-/root/Napcat}"
 BOT_QQ="${BOT_QQ:-}"
@@ -73,9 +73,9 @@ start_widget() {
   [ -s /mnt/d/widget_name.txt ] || echo "sprite" > /mnt/d/widget_name.txt
   [ -f tools/avatar.gif ] && cp tools/avatar.gif /mnt/d/avatar.gif
   [ -f tools/avatar.png ] && cp tools/avatar.png /mnt/d/avatar.png
-  # 无自定义头像时用官方图标（tools/sprite_icon.png）作默认形象
-  if [ ! -f tools/avatar.gif ] && [ ! -f tools/avatar.png ] && [ -f tools/sprite_icon.png ]; then
-    cp tools/sprite_icon.png /mnt/d/avatar.png
+  # 无自定义头像时用官方图标（assets/sprite_icon.png）作默认形象
+  if [ ! -f tools/avatar.gif ] && [ ! -f tools/avatar.png ] && [ -f assets/sprite_icon.png ]; then
+    cp assets/sprite_icon.png /mnt/d/avatar.png
   fi
   echo "[桌宠] 启动 Windows 桌宠..."
   # 用Windows原生路径启动（/mnt/d/... 会被Windows Python误解为UNC路径）

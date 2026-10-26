@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # sprite 状态一览：./status.sh
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 echo "── NapCat（QQ协议端）──"
 sudo ss -tln 2>/dev/null | grep -q ":3001" && echo "  ✅ 运行中 (3001 监听)" || echo "  ❌ 未运行"

@@ -2,7 +2,7 @@
 # sprite 一键停止
 # 用法：./stop.sh            —— 全部停止（QQ + B站 + NapCat）
 #       ./stop.sh qq | bili  —— 只停对应端（qq 含 NapCat，bili 只停 watch）
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 TARGET="${1:-all}"
 
 stop_by_pidfile() {  # $1=pidfile名 $2=显示名
