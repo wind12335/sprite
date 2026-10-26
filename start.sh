@@ -69,6 +69,10 @@ start_widget() {
   echo "$NAPCAT_DIR" > /mnt/d/napcat_dir.txt
   [ -f tools/avatar.gif ] && cp tools/avatar.gif /mnt/d/avatar.gif
   [ -f tools/avatar.png ] && cp tools/avatar.png /mnt/d/avatar.png
+  # 无自定义头像时用官方图标（tools/sprite_icon.png）作默认形象
+  if [ ! -f tools/avatar.gif ] && [ ! -f tools/avatar.png ] && [ -f tools/sprite_icon.png ]; then
+    cp tools/sprite_icon.png /mnt/d/avatar.png
+  fi
   echo "[桌宠] 启动 Windows 桌宠..."
   # 用Windows原生路径启动（/mnt/d/... 会被Windows Python误解为UNC路径）
   # 输出全部落 D:\widget.log：终端不再冒GBK乱码，异常也有据可查
