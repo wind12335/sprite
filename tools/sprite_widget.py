@@ -1,4 +1,4 @@
-"""sprite 桌宠 v18 —— 持久界面切换（不销毁重建） 单实例改用锁文件+PID存活检查（端口表被WSL镜像网络污染不可信）。"""
+"""sprite 桌宠 v19 —— 修复HERE定义顺序(部署文件读取无声失败) —— 持久界面切换（不销毁重建） 单实例改用锁文件+PID存活检查（端口表被WSL镜像网络污染不可信）。"""
 import os
 import queue
 import socket
@@ -14,6 +14,11 @@ try:
 except ImportError:
     print("请先: pip install pillow"); sys.exit(1)
 
+HERE = Path(__file__).parent  # 必须最先定义：下面的部署文件读取要用
+WSL_CMD = ["wsl", "-e", "bash", "-c"]
+BG = "#faf0ff"
+DISPLAY_SIZE = 72  # 头像显示尺寸（缩放加载，避免原图撑爆窗口）
+
 def _read_deploy(name, default=""):
     """读取 start.sh widget 部署时写下的路径文件（跟随部署位置，不硬编码）。"""
     try:
@@ -25,10 +30,6 @@ def _read_deploy(name, default=""):
 SPRITE_DIR = _read_deploy("sprite_dir.txt")   # WSL里仓库的Linux路径
 NAPCAT_DIR = _read_deploy("napcat_dir.txt", "/root/Napcat")
 PET_NAME = _read_deploy("widget_name.txt", "sprite")  # 桌宠名=config.toml [persona].name
-WSL_CMD = ["wsl", "-e", "bash", "-c"]
-BG = "#faf0ff"
-DISPLAY_SIZE = 72  # 头像显示尺寸（缩放加载，避免原图撑爆窗口）
-HERE = Path(__file__).parent
 
 
 def _log(msg: str) -> None:
@@ -528,5 +529,5 @@ if __name__ == "__main__":
         _r = tk.Tk(); _r.withdraw()
         _mb.showinfo("sprite 桌宠", "桌宠已经在运行了（看看屏幕右下角）。\n本次启动自动退出。")
         sys.exit(0)
-    _log("桌宠启动 v18")
+    _log(f"桌宠启动 v19 部署环境: SPRITE_DIR={SPRITE_DIR!r} NAPCAT_DIR={NAPCAT_DIR!r} PET_NAME={PET_NAME!r}")
     Widget()
