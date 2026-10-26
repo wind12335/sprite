@@ -1,6 +1,7 @@
 # sprite 配置模板（复制为 config.toml 后填写 ★ 项）
 
-# GLM（智谱）配置：OpenAI 兼容接口，默认大脑 = glm-5.3
+# LLM 配置：任意 OpenAI 兼容厂商（GLM/DeepSeek/Qwen/Kimi…），默认 GLM = glm-5.3
+# 换 DeepSeek：base_url = "https://api.deepseek.com"，model = "deepseek-chat"
 [llm]
 # ── 两种 Key，二选一 ─────────────────────────────────────────────
 # ① 普通 Key（按量付费/赠送额度，https://open.bigmodel.cn 创建）：

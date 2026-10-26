@@ -1,12 +1,12 @@
-# sprite 🐟✨ — GLM 驱动的 B站 + QQ 双端 AI 桌宠助手
+# sprite 🐟✨ — B站 + QQ 双端 AI 桌宠助手（任意 OpenAI 兼容模型）
 
-智谱娘住进你的 WSL：白天在 B 站看 AI infra 视频写笔记、发动态、回评论；在 QQ 群里有人设地聊天、看图、认主人；晚上把一天的知识蒸馏成综述同步进 Obsidian；还能把论文 PDF 吃进知识库。Windows 桌面上有一只桌宠，一键启停所有能力。
+默认人设是智谱娘（GLM 出品），但大脑可插拔——DeepSeek、Qwen、Kimi 等任意 OpenAI 兼容模型都能换上，人设也在配置里随便改。她住进你的 WSL：白天在 B 站看 AI infra 视频写笔记、发动态、回评论；在 QQ 群里有人设地聊天、看图、认主人；晚上把一天的知识蒸馏成综述同步进 Obsidian；还能把论文 PDF 吃进知识库。Windows 桌面上有一只桌宠，一键启停所有能力。
 
 ```
                  ┌─────────────────────────────┐
-                 │      GLM (智谱开放平台)       │
-                 │  glm-5.3 深度 / flash 快筛    │
-                 │  glm-4.6v 视觉理解           │
+                 │  任意 OpenAI 兼容 LLM 厂商     │
+                 │  GLM / DeepSeek / Qwen / Kimi │
+                 │  （看图需多模态视觉模型）        │
                  └──────────┬──────────────────┘
         ┌───────────────────┼───────────────────┐
    ┌────▼─────┐       ┌─────▼──────┐      ┌─────▼─────┐
@@ -27,8 +27,8 @@
 
 | 端 | 能力 |
 |---|---|
-| B站 | 关键词+UP主订阅→两级筛选（flash 快筛省 70% token）→字幕深度解析→发动态@主人→总结评论→楼中楼追问（防杠精） |
-| QQ | NapCat/OneBot v11，人设对话、@/关键词/私聊触发、图片理解（4.6v）、主人识别、/命令、防刷屏防杠精、两级禁言 |
+| B站 | 关键词+UP主订阅→两级筛选（便宜模型快筛省 70% token）→字幕深度解析→发动态@主人→总结评论→楼中楼追问（防杠精） |
+| QQ | NapCat/OneBot v11，人设对话、@/关键词/私聊触发、图片理解（需多模态模型）、主人识别、/命令、防刷屏防杠精、两级禁言 |
 | 知识 | 报告入库→TF-IDF 检索（纯本地零依赖）；`distill` 把相关报告蒸馏成综述；MemGPT 式会话归档 |
 | Obsidian | 所有报告/综述/论文笔记带 YAML frontmatter 写入你的 vault |
 | 论文 | PDF→GLM 解析→结构化笔记→知识库+Obsidian |
@@ -47,7 +47,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-### 2. 配置 GLM API
+### 2. 配置模型（任意 OpenAI 兼容厂商）
 
 ```bash
 cp config.example.toml config.toml
@@ -55,12 +55,23 @@ nano config.toml
 ```
 
 必填项（模板里搜 ★）：
-- `[llm] api_key`：到 https://open.bigmodel.cn 创建。**更安全**：不落盘，`export GLM_API_KEY=xxx`（环境变量优先于配置文件）
+- `[llm] base_url + api_key + model`：按你选的厂商填（下面有现成对照）
 - `[watch] master_uid`：你的B站 UID（动态@你）；`comment_at_uid`：评论里@的账号
 - `[qq] owner_qq`：你的主 QQ 号（人设认主人，私聊免冷却）
 - `[obsidian] vault_path`：你的 Obsidian 库路径（不用可留空）
 
-模型：`glm-5.3` 大脑（深度）、`glm-5.3-flash` 快筛（便宜）、`glm-4.6v` 看图。GLM Coding Plan 用户把 `base_url` 换成 `https://open.bigmodel.cn/api/coding/paas/v4`（模板有注释）。
+**厂商对照**（都是 OpenAI 兼容接口，填三行就换脑）：
+
+| 厂商 | base_url | 大脑 model | 快筛 model | 看图 |
+|---|---|---|---|---|
+| 智谱 GLM（默认） | `https://open.bigmodel.cn/api/paas/v4` | `glm-5.3` | `glm-5.3-flash` | `glm-4.6v` |
+| 智谱 Coding Plan | `https://open.bigmodel.cn/api/coding/paas/v4` | 同上（套餐内） | 同上 | 同上（套餐内） |
+| DeepSeek | `https://api.deepseek.com` | `deepseek-chat` | `deepseek-chat` | 无视觉模型，`vision_model` 置空禁用看图 |
+| 通义 Qwen | `https://dashscope.aliyuncs.com/compatible-mode/v1` | `qwen-plus` | `qwen-turbo` | `qwen-vl-plus` |
+
+Key 获取：智谱 https://open.bigmodel.cn ｜ DeepSeek https://platform.deepseek.com ｜ 阿里 https://dashscope.console.aliyun.com 。**更安全**：不落盘，`export GLM_API_KEY=xxx`（环境变量优先于配置文件）。
+
+人设是 `[persona]` 里的提示词——默认智谱娘，你可以改成任何角色（DeepSeek 用户不妨试试大肥鱼人设 🐋）。
 
 ### 3. B站登录（一次性）
 

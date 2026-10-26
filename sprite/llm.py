@@ -1,4 +1,4 @@
-"""GLM 调用：走智谱的 OpenAI 兼容 /chat/completions 接口，只依赖 requests。"""
+"""LLM 调用：走 OpenAI 兼容 /chat/completions 接口（GLM/DeepSeek/Qwen/Kimi 皆可），只依赖 requests。"""
 
 import time
 
@@ -28,9 +28,11 @@ class LLM:
             "messages": messages,
             "temperature": self.temperature,
             "max_tokens": max_tokens,
-            # glm-5.3 等模型支持：闲聊场景关闭深度思考，更快更省 token
-            "thinking": {"type": "enabled" if self.thinking else "disabled"},
         }
+        # thinking 是 GLM 专有参数：仅在显式开启时发送，
+        # 其他厂商（DeepSeek/Qwen/OpenAI等）的兼容接口不会收到未知字段
+        if self.thinking:
+            payload["thinking"] = {"type": "enabled"}
         headers = {"Authorization": f"Bearer {self.api_key}"}
         last_err = None
         for attempt in range(retries + 1):
