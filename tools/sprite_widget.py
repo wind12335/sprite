@@ -167,13 +167,27 @@ class AvatarAnimator:
         self.frames = frames
         _log(f"已加载GIF头像（{len(frames)}帧）")
 
+    def _try_frame(self, path, dur):
+        if path.exists():
+            return (self._photo(Image.open(path)), dur)
+        return None
+
     def _load_png(self, path, blink=False):
         p = path.parent
         normal = (self._photo(Image.open(path)), 3000)
         if not blink:
-            self.variants["idle"] = [normal]
-            self.frames = [normal]
-            _log("已加载PNG头像（静态）")
+            # 自定义头像也支持表情套图：同名 _blink/_working/_error 姊妹帧
+            idle = [normal]
+            blink_f = self._try_frame(path.with_name(path.stem + "_blink.png"), 150)
+            work_f = self._try_frame(path.with_name(path.stem + "_working.png"), 650)
+            err_f = self._try_frame(path.with_name(path.stem + "_error.png"), 3000)
+            if blink_f: idle.append(blink_f)
+            self.variants["idle"] = idle
+            self.frames = idle
+            if work_f: self.variants["working"] = [work_f, normal]
+            if err_f: self.variants["error"] = [err_f]
+            n = 1 + sum(x is not None for x in (blink_f, work_f, err_f))
+            _log(f"已加载自定义头像（{n}态套图）" if n > 1 else "已加载自定义头像（静态）")
             return
         blink_f = (self._photo(Image.open(p / "sprite_avatar_blink.png")), 150)
         self.variants["idle"] = [normal, blink_f]
@@ -182,9 +196,9 @@ class AvatarAnimator:
         if work_png.exists() and err_png.exists():
             self.variants["working"] = [(self._photo(Image.open(work_png)), 650), normal]
             self.variants["error"] = [(self._photo(Image.open(err_png)), 3000)]
-            _log("已加载PNG头像（睁眼/眨眼/干活/出错 四态）")
+            _log("已加载默认头像（睁眼/眨眼/干活/出错 四态）")
         else:
-            _log("已加载PNG头像（带眨眼）")
+            _log("已加载默认头像（带眨眼）")
 
     def set_variant(self, name):
         """切换状态帧组；自定义头像没有专属帧组时自动回退idle帧。"""

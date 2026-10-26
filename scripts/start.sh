@@ -77,9 +77,14 @@ start_widget() {
   [ -s /mnt/d/widget_name.txt ] || echo "sprite" > /mnt/d/widget_name.txt
   [ -f tools/avatar.gif ] && cp tools/avatar.gif /mnt/d/avatar.gif
   [ -f tools/avatar.png ] && cp tools/avatar.png /mnt/d/avatar.png
-  # 无自定义头像时用官方图标（assets/sprite_icon.png）作默认形象
-  if [ ! -f tools/avatar.gif ] && [ ! -f tools/avatar.png ] && [ -f assets/sprite_icon.png ]; then
-    cp assets/sprite_icon.png /mnt/d/avatar.png
+  # 无自定义头像时部署官方四态套图（assets/pet_*.png）
+  if [ ! -f tools/avatar.gif ] && [ ! -f tools/avatar.png ]; then
+    for st in idle blink working error; do
+      [ -f assets/pet_$st.png ] && cp assets/pet_$st.png /mnt/d/avatar_$st.png
+    done
+    [ -f /mnt/d/avatar_idle.png ] && cp /mnt/d/avatar_idle.png /mnt/d/avatar.png
+  else
+    rm -f /mnt/d/avatar_idle.png /mnt/d/avatar_blink.png /mnt/d/avatar_working.png /mnt/d/avatar_error.png
   fi
   echo "[桌宠] 启动 Windows 桌宠..."
   # 用Windows原生路径启动（/mnt/d/... 会被Windows Python误解为UNC路径）
