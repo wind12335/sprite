@@ -67,6 +67,10 @@ start_widget() {
   cp tools/sprite_widget.py /mnt/d/sprite_widget.py
   pwd > /mnt/d/sprite_dir.txt
   echo "$NAPCAT_DIR" > /mnt/d/napcat_dir.txt
+  # 桌宠标题栏名字 = config.toml [persona].name（缺省 sprite）
+  grep -A5 '^\[persona\]' config.toml 2>/dev/null | grep '^name' | head -1 \
+    | sed 's/.*= *"\([^"]*\)".*/\1/' > /mnt/d/widget_name.txt
+  [ -s /mnt/d/widget_name.txt ] || echo "sprite" > /mnt/d/widget_name.txt
   [ -f tools/avatar.gif ] && cp tools/avatar.gif /mnt/d/avatar.gif
   [ -f tools/avatar.png ] && cp tools/avatar.png /mnt/d/avatar.png
   # 无自定义头像时用官方图标（tools/sprite_icon.png）作默认形象

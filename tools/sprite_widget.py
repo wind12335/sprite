@@ -24,6 +24,7 @@ def _read_deploy(name, default=""):
 
 SPRITE_DIR = _read_deploy("sprite_dir.txt")   # WSL里仓库的Linux路径
 NAPCAT_DIR = _read_deploy("napcat_dir.txt", "/root/Napcat")
+PET_NAME = _read_deploy("widget_name.txt", "sprite")  # 桌宠名=config.toml [persona].name
 WSL_CMD = ["wsl", "-e", "bash", "-c"]
 BG = "#faf0ff"
 DISPLAY_SIZE = 72  # 头像显示尺寸（缩放加载，避免原图撑爆窗口）
@@ -218,7 +219,7 @@ class Widget:
         self.avatar_label = tk.Label(header, image=img, bg="#e8d5f0")
         self.avatar_label.image = img  # 防GC
         self.avatar_label.pack(side="left", padx=4, pady=2)
-        tk.Label(header, text=" 智谱娘 ✨", font=("Microsoft YaHei UI", 11, "bold"),
+        tk.Label(header, text=f" {PET_NAME} ✨", font=("Microsoft YaHei UI", 11, "bold"),
                  bg="#e8d5f0", fg="#6a2a8a").pack(side="left")
         tk.Button(header, text="✕", command=self._quit,
                   font=("Microsoft YaHei UI", 9, "bold"), bg="#e57373", fg="white",
