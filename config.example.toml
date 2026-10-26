@@ -1,0 +1,122 @@
+# sprite 配置模板（复制为 config.toml 后填写 ★ 项）
+
+# GLM（智谱）配置：OpenAI 兼容接口，默认大脑 = glm-5.3
+[llm]
+# ── 两种 Key，二选一 ─────────────────────────────────────────────
+# ① 普通 Key（按量付费/赠送额度，https://open.bigmodel.cn 创建）：
+#    base_url = "https://open.bigmodel.cn/api/paas/v4"
+# ② GLM Coding Plan 的 Key（个人 coding 套餐，端点不同！）：
+#    base_url = "https://open.bigmodel.cn/api/coding/paas/v4"
+#    注意：Coding Plan 定位是编程用途；套餐内还包含视觉模型 glm-4.6v。
+# ────────────────────────────────────────────────────────────────
+base_url = "https://open.bigmodel.cn/api/paas/v4"
+api_key = ""               # 也可以用环境变量 GLM_API_KEY 传入（推荐，避免明文落盘）
+model = "glm-5.3"       # 旗舰版；省钱可换 "glm-5.3-flash"（轻量版）
+temperature = 0.8
+# 深度思考开关。闲聊/评论建议 false（更快更省）；要更深解析再开
+thinking = false
+
+# 快筛模型（第一级）：长上下文、便宜，负责"是否相关 + 短摘要"
+# base_url / api_key 不填则继承上面的 [llm]
+[llm_screen]
+model = "glm-5.3-flash"
+temperature = 0.2
+thinking = false
+
+# ── watch：B站视频情报流水线 ──────────────────────────────────────
+[watch]
+keywords = [
+  "AI infra", "大模型推理", "vLLM", "推理引擎", "KV Cache",
+  "大模型论文解读", "分布式训练", "CUDA", "AI基础设施",
+  # ── 算子优化 / GPU编程 ──
+  "triton", "CUTLASS", "算子优化", "算子开发", "CUDA编程", "FlashAttention",
+  # ── AI编译器 ──
+  "AI编译器", "深度学习编译器", "MLIR", "LLVM",
+]
+# 盯指定UP主（多UP列表，各自拉最近投稿后合并去重进快筛）
+watch_ups = []
+scan_interval_seconds = 7200   # 每轮扫描间隔（2小时，带随机抖动）
+candidates_per_day = 20        # 每天最多处理多少个新视频
+lookback_days = 3              # 只看最近 N 天发布的
+min_duration_seconds = 300     # 太短的讲解通常没料
+master_uid = 0                 # ★动态@的B站UID（收通知的主人）；0=不发动态@
+daily_dynamic_limit = 3        # 一天最多发几条动态
+dynamic_max_chars = 350        # 动态正文字数上限
+# ── 总结评论（在被解析的视频下公开发评论，风险高于动态，默认限额保守）──
+post_comment = true            # 是否发布总结评论
+comment_at_uid = 0             # ★评论里@的账号UID（0=不@）；零宽字符格式触发对方通知
+comment_daily_limit = 5        # 一天最多评论几条
+comment_gap_seconds = 120      # 两条评论的最小间隔（带抖动）
+comment_max_chars = 280        # 评论长度上限
+publish_article = true         # 完整解析尝试发专栏（实验性；失败自动只存本地）
+article_category_id = 15       # 专栏分区（15=科技）
+report_dir = "data/reports"    # 完整解析本地 markdown 落地目录（= 知识库）
+# 社交闭环：watch 每轮扫描尾部，检查"我方评论的楼中楼"和"我方动态的评论区"并回复
+social_sweep = true
+subtitle_compress = true     # 字幕预压缩：flash压要点再喂旗舰模型，输入省75-85%
+daily_token_budget = 2000000  # 日token预算护栏，超标自动降级跳过深度解析；0=不限
+
+# ── QQ 接入（OneBot v11 / NapCat）：智谱娘上QQ ──────────────────
+[qq]
+ws_url = "ws://127.0.0.1:3001"   # NapCat 正向WS地址
+access_token = ""                # NapCat 里设了 accessToken 才填
+group_whitelist = []             # 允许的群号；空=所有群（黑名单优先）
+group_blacklist = []             # 拒绝的群号
+reply_private = true             # 是否回应私聊
+owner_qq = 0                     # ★主人QQ号：人设认知（对话标注"主人"、更亲近）、私聊免冷却
+vision_model = "glm-4.6v"        # 图片理解模型：群里发截图她能看（Coding Plan已含）；置空禁用
+image_trigger_groups = []       # 这些群里所有人裸发图都触发识别（空=仅主人/引用她的消息/@触发）
+trigger_keywords = []            # 群里说这些词也触发（人设名与QQ昵称始终触发）
+random_interject_rate = 0.0      # 群聊随机插话概率(0~1)，默认关闭
+cooldown_seconds = 20            # 同一会话两次回复最小间隔（防刷屏；主人豁免）
+daily_reply_limit = 300          # 每日回复总量（token 保护）
+session_rounds = 8               # 每个会话保留的上下文轮数
+max_reply_chars = 200            # 单条回复长度上限
+
+# 人设：评论区/QQ里的口吻由这里决定
+[persona]
+name = "智谱娘"
+system_prompt = """你叫智谱娘，是一个住在互联网里的电子妖精，你擅长用清晰易懂的语言去讲解ai相关知识、原理以及应用。
+说话风格：慵懒、嘴碎但讲解却非常清晰易懂，偶尔自嘲，喜欢在句尾加"捏"。
+回复要求：相对简短（B站评论场景，尽量两三句话以内，最多120字符），相对口语化，关键原理部分要用术语，不使用任何格式排版。"""
+
+# 风控与合规：默认值偏保守，跑稳了再放宽
+[safety]
+# 每条评论/动态末尾追加的AIGC显式标识；置空=不加（《人工智能生成合成内容标识办法》要求标识，去掉有合规风险）
+aigc_label = "🤖AI生成"
+poll_interval_seconds = 120     # reply-loop 轮询间隔
+watch_video_count = 5           # reply-loop 只盯最近 N 个视频的评论区
+max_reply_per_poll = 3          # 每轮最多回复几条
+reply_gap_seconds = 45          # 两条回复间隔
+reply_daily_limit = 30          # 每日回复上限
+reply_cooldown_per_user = 1800  # 同一用户两次被回复的最小间隔（秒）
+dynamic_daily_limit = 3         # dynamic 命令每日上限
+# 社交回复（楼中楼/动态评论）的防杠护栏
+reply_in_thread_daily_limit = 10  # 每天楼中楼/动态评论回复总量上限
+per_user_per_thread = 2           # 同一人同一条评论/动态下最多被回复几次
+
+# ── 自动保洁：旧会话归档清理 / 日志裁尾 / 知识库体量监控 ──
+[housekeep]
+session_max_age_days = 7    # 超过N天没说话的QQ会话自动清理；清理前用flash蒸成档案摘要存qq_profiles.json（再聊时自动召回），主人会话豁免
+log_max_kb = 2048           # run.log/qq.log 超过此KB自动裁尾
+reports_max_mb = 50         # 知识库(data/reports)超过此MB时在QQ上提醒蒸馏瘦身
+napcat_dir = "/root/Napcat"  # NapCat/QQ目录（含图片缓存），账单常规监控项
+napcat_base_mb = 750         # QQ程序本体基线体积，超出部分≈缓存堆积
+napcat_max_mb = 2000         # 总量超过此MB时在QQ账单里提醒触发缓存清理插件
+notify_qq = true            # 保洁账单通过QQ私聊发给主人（NapCat离线则跳过）
+
+# ── Obsidian 同步（可选）─────────────────────────────────────────
+[obsidian]
+vault_path = ""              # ★想同步就填 vault 路径（WSL视角，如 /mnt/d/note/MyVault）；空=不同步
+subfolder = "AI-Infra"       # 写入 vault 内的子文件夹
+sync = true
+
+# ── 保洁（MemGPT式会话归档/日志轮转/配额提醒）────────────────────
+[housekeep]
+session_max_age_days = 7     # 超龄会话LLM摘要后归档
+log_max_kb = 512             # 日志裁尾阈值(KB)
+reports_max_mb = 50          # 知识库报告目录体积提醒阈值(MB)
+napcat_dir = "/root/Napcat"  # NapCat目录（缓存体积监控）；与 NAPCAT_DIR 环境变量二选一
+napcat_base_mb = 1500        # NapCat体积基线(MB)，低于基线不提醒
+napcat_max_mb = 2000         # NapCat总体积超此MB在QQ里提醒清缓存
+notify_qq = true             # 保洁动作QQ私聊通知主人

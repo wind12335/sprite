@@ -1,0 +1,33 @@
+# 运行时数据（凭据/记忆/知识库/报告/字幕）—— 整个 data/ 不出机器
+data/
+
+# 含 API Key 的实际配置（用 config.example.toml 作模板）
+config.toml
+
+# 日志
+run.log
+qq.log
+widget.log
+*.log
+
+# NapCat 安装目录与QQ数据库（不属于本项目，且含隐私）
+NapCat/
+NapCat.Shell.zip*
+guild1.db*
+
+# 历史遗留
+wechatauto_logs/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# 桌宠部署产物与个人头像
+sprite_dir.txt
+napcat_dir.txt
+tools/avatar.gif
+tools/avatar.png
+tools/sprite_avatar*.png
+widget.lock
+*.pid

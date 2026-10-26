@@ -1,0 +1,5 @@
+bilibili-api-python>=17.0.0
+requests>=2.31.0
+curl_cffi
+jieba
+websockets
