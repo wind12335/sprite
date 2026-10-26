@@ -1,6 +1,6 @@
 # sprite 命令与参数手册
 
-> GLM-5.3 驱动的 B 站账号机器人：视频情报流水线 / 评论自动回复 / 知识库与自我进化。
+> LLM 驱动（任意 OpenAI 兼容模型）的 B 站账号机器人：视频情报流水线 / 评论自动回复 / 知识库与自我进化。
 > 本文档是全量命令与参数参考；概览、部署与风险说明见 [README.md](README.md)。
 
 ## 目录
@@ -20,7 +20,7 @@
 git clone <repo> && cd sprite
 python3 -m venv .venv && source .venv/bin/activate   # 需 Python ≥ 3.11
 pip install -r requirements.txt
-cp config.example.toml config.toml                    # 编辑：填 GLM Key、你的B站UID
+cp config.example.toml config.toml                    # 编辑：填 API Key、你的B站UID
 export GLM_API_KEY="..."                              # 或用环境变量代替落盘
 python main.py login                                  # B站App扫码
 python main.py watch --once --dry-run                 # 预演一轮，看将发布什么

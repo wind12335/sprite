@@ -129,7 +129,7 @@ def load_config() -> dict:
 
     if not cfg["llm"]["api_key"]:
         raise SystemExit(
-            "缺少 GLM API Key：请在 config.toml 的 [llm].api_key 填入，"
+            "缺少 LLM API Key：请在 config.toml 的 [llm].api_key 填入，"
             "或设置环境变量 GLM_API_KEY。Key 在 https://open.bigmodel.cn 获取。"
         )
     return cfg

@@ -134,7 +134,7 @@ systemctl status sprite-qq --no-pager   # 查看运行状态
 
 | 症状 | 原因与处理 |
 |---|---|
-| **凭据速查** | WebUI token：`sudo cat /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/webui.json \| grep '"token"'`；WS token 与 GLM Key：`grep -E "access_token\|api_key" config.toml`（凭据只存在 gitignore 的文件里，勿写进文档/代码） |
+| **凭据速查** | WebUI token：`sudo cat /root/Napcat/opt/QQ/resources/app/app_launcher/napcat/config/webui.json \| grep '"token"'`；WS token 与 LLM Key：`grep -E "access_token\|api_key" config.toml`（凭据只存在 gitignore 的文件里，勿写进文档/代码） |
 | 3001 一直不监听 | NapCat 没登录。**隔天/隔几天首次启动大概率要重新扫码（会话过期，属正常现象）**：开 WebUI（6099）→ QQ登录页 → 小号扫码。快速登录重启法：`sudo screen -dmS napcat xvfb-run -a /root/Napcat/opt/QQ/qq --no-sandbox -q <你的小号QQ>` |
 | 小号掉线（登录态过期） | WebUI 里重新扫码；NapCat 会话一般能维持很久，掉线多因异地/风控 |
 | sprite qq 提示连接断开 | 正常现象（自动重连）；持续失败检查 NapCat 是否还活着、3001 是否监听 |

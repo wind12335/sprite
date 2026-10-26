@@ -9,7 +9,7 @@
   python main.py dynamic --text "手动内容"               # 直接发布指定文本
   python main.py video a.mp4 --title "标题" --tags "日常,记录" [--tid 21] [--cover c.jpg]
   python main.py watch [--once]            # AI infra 视频情报：搜索→字幕→两级解析→动态@我
-  python main.py paper <pdf> [pdf...]      # 论文入库：PDF→GLM解析→知识库+Obsidian
+  python main.py paper <pdf> [pdf...]      # 论文入库：PDF→LLM解析→知识库+Obsidian
   python main.py daily-digest [--date 2026-10-25]  # 日期综述：该日报告→综述→Obsidian（--prune 归档原文）
   python main.py housekeep                 # 手动触发保洁（旧会话清理/日志裁尾/知识库体量检查）
 """
@@ -334,7 +334,7 @@ PAPER_PROMPT = """你是资深AI研究员。对下面这篇论文写一份深度
 
 
 def cmd_paper(args) -> None:
-    """论文入库：PDF → pdftotext提取 → GLM-5.3解析 → 知识库 + Obsidian。"""
+    """论文入库：PDF → pdftotext提取 → LLM解析 → 知识库 + Obsidian。"""
     import subprocess as _sp
 
     from sprite.obsidian_sync import sync_to_obsidian
@@ -363,10 +363,10 @@ def cmd_paper(args) -> None:
             print(f"  ❌ PDF读取失败: {e}")
             continue
 
-        # 截断保护（GLM-5.3 上下文够大，但400k字符以上截）
+        # 截断保护（大上下文模型也够呛，400k字符以上截断）
         if len(text) > 400_000:
             text = text[:400_000] + "\n…（过长截断）"
-        print(f"  提取 {len(text)} 字，GLM解析中…")
+        print(f"  提取 {len(text)} 字，LLM解析中…")
 
         report = deep.chat(
             [{"role": "user", "content": PAPER_PROMPT.format(title=title, text=text)}],
@@ -495,7 +495,7 @@ def cmd_housekeep(_args) -> None:
 
 def main() -> None:
     install_timestamped_print()
-    parser = argparse.ArgumentParser(description="sprite：GLM 驱动的 B 站机器人")
+    parser = argparse.ArgumentParser(description="sprite：LLM 驱动（GLM/DeepSeek/Qwen…）的 B站+QQ 机器人")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("login").set_defaults(func=cmd_login)
@@ -520,7 +520,7 @@ def main() -> None:
 
     sub.add_parser("usage", help="查看今日 token 消耗").set_defaults(func=cmd_usage)
 
-    p_paper = sub.add_parser("paper", help="论文入库：PDF→GLM解析→知识库+Obsidian")
+    p_paper = sub.add_parser("paper", help="论文入库：PDF→LLM解析→知识库+Obsidian")
     p_paper.add_argument("files", nargs="+", help="PDF文件路径（可多个）")
     p_paper.set_defaults(func=cmd_paper)
 
@@ -543,7 +543,7 @@ def main() -> None:
 
     p_dyn = sub.add_parser("dynamic")
     p_dyn.add_argument("--text", help="直接发布这段文本")
-    p_dyn.add_argument("--llm", action="store_true", help="让 GLM 按人设写动态")
+    p_dyn.add_argument("--llm", action="store_true", help="让 LLM 按人设写动态")
     p_dyn.add_argument("--topic", help="LLM 写动态的主题提示")
     p_dyn.add_argument("--yes", "-y", action="store_true", help="跳过发布确认")
     p_dyn.set_defaults(func=cmd_dynamic)

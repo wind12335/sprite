@@ -1,4 +1,10 @@
-# sprite 🐟✨ — B站 + QQ 双端 AI 桌宠助手（任意 OpenAI 兼容模型）
+<p align="center">
+  <img src="tools/sprite_icon.png" width="180" alt="sprite"/>
+</p>
+
+<h1 align="center">sprite ✨</h1>
+
+<p align="center">B站 + QQ 双端 AI 桌宠助手 · 任意 OpenAI 兼容模型（GLM / DeepSeek / Qwen / Kimi…）</p>
 
 默认人设是智谱娘（GLM 出品），但大脑可插拔——DeepSeek、Qwen、Kimi 等任意 OpenAI 兼容模型都能换上，人设也在配置里随便改。她住进你的 WSL：白天在 B 站看 AI infra 视频写笔记、发动态、回评论；在 QQ 群里有人设地聊天、看图、认主人；晚上把一天的知识蒸馏成综述同步进 Obsidian；还能把论文 PDF 吃进知识库。Windows 桌面上有一只桌宠，一键启停所有能力。
 
