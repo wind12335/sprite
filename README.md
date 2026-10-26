@@ -114,6 +114,7 @@ NapCat 是 QQ 的 OneBot v11 实现，sprite 通过 WebSocket 与它通信。按
 
 - **左键点一下头像**：展开控制面板；**长按拖动**：挪位置；**右键**：菜单；**Esc**：收起
 - 换形象：放 `avatar.gif` 或 `avatar.png` 到仓库 `tools/` 下，重启 widget
+- 标题栏名字取自 `config.toml [persona].name`——QQ 人设叫什么，桌宠就叫什么
 - 排查看 `D:\widget.log`（含 400ms 粒度窗口状态飞行记录）
 
 ### 7. 定时任务（可选）

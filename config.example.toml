@@ -26,15 +26,10 @@ thinking = false
 
 # ── watch：B站视频情报流水线 ──────────────────────────────────────
 [watch]
-keywords = [
-  "AI infra", "大模型推理", "vLLM", "推理引擎", "KV Cache",
-  "大模型论文解读", "分布式训练", "CUDA", "AI基础设施",
-  # ── 算子优化 / GPU编程 ──
-  "triton", "CUTLASS", "算子优化", "算子开发", "CUDA编程", "FlashAttention",
-  # ── AI编译器 ──
-  "AI编译器", "深度学习编译器", "MLIR", "LLVM",
-]
-# 盯指定UP主（多UP列表，各自拉最近投稿后合并去重进快筛）
+# 起步关键词示例，按自己的关注方向继续加即可（越具体越精准）
+keywords = ["AI infra", "大模型", "CUDA"]
+# 盯指定UP主：填B站UID数字（UP主页链接 space.bilibili.com/<UID> 里的那串），
+# 如 [226257455, 20261527]；各自拉最近投稿后合并去重进快筛
 watch_ups = []
 scan_interval_seconds = 7200   # 每轮扫描间隔（2小时，带随机抖动）
 candidates_per_day = 20        # 每天最多处理多少个新视频
