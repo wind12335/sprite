@@ -334,6 +334,17 @@ PAPER_PROMPT = """你是资深AI研究员。对下面这篇论文写一份深度
 {text}"""
 
 
+def _shelve_pdf(pdf: Path, papers_dir: Path) -> None:
+    """已消化的PDF移入 papers/absorbed/：活跃目录只剩待处理队列，原件可追溯。"""
+    try:
+        if papers_dir.resolve() in pdf.resolve().parents:
+            dest = papers_dir / "absorbed"
+            dest.mkdir(exist_ok=True)
+            pdf.rename(dest / pdf.name)
+    except Exception:
+        pass  # 移动失败不影响主流程
+
+
 def cmd_paper(args) -> None:
     """论文入库：PDF → pdftotext提取 → LLM解析 → 知识库 + Obsidian。
     不带参数=吸收 data/papers 整个目录（已解析过的自动跳过）；也可显式指定PDF路径。"""
@@ -358,8 +369,10 @@ def cmd_paper(args) -> None:
             print(f"❌ 找不到 {pdf_path}")
             continue
         # 防重复解析：任何日期下已有同编号的论文笔记就跳过（跨天重复抓取的场景）
+        papers_dir = ROOT / (cfg.get("ingest") or {}).get("papers_dir", "data/papers")
         if list(report_dir.glob(f"*paper_{pdf.stem[:40]}.md")):
-            print(f"  ↷ {pdf.name} 已有解析笔记，跳过")
+            print(f"  ↷ {pdf.name} 已有解析笔记，跳过并归档")
+            _shelve_pdf(pdf, papers_dir)
             continue
         print(f"\n═══ 解析 {pdf.name} ═══")
         try:
@@ -398,6 +411,7 @@ def cmd_paper(args) -> None:
                                source=pdf.stem, doc_type="paper-analysis")
         if obs:
             print(f"  ✅ Obsidian：{obs}")
+        _shelve_pdf(pdf, papers_dir)  # 消化完归档，活跃目录保持纯队列
 
     print(f"\n今日 token：{usage_summary()}")
 
