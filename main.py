@@ -18,6 +18,7 @@ import argparse
 import asyncio
 import inspect
 import sys
+from pathlib import Path
 
 from sprite.bili import Bili, load_credential, qr_login
 from sprite.config import ROOT, load_config
