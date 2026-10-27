@@ -351,6 +351,10 @@ def cmd_paper(args) -> None:
         if not pdf.exists():
             print(f"❌ 找不到 {pdf_path}")
             continue
+        # 防重复解析：任何日期下已有同编号的论文笔记就跳过（跨天重复抓取的场景）
+        if list(report_dir.glob(f"*paper_{pdf.stem[:40]}.md")):
+            print(f"  ↷ {pdf.name} 已有解析笔记，跳过")
+            continue
         print(f"\n═══ 解析 {pdf.name} ═══")
         try:
             r = _sp.run(["pdftotext", "-l", "100", str(pdf), "-"],
