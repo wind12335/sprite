@@ -12,6 +12,11 @@ import time
 from pathlib import Path
 
 from ..config import DATA_DIR
+from ..flow.websearch import format_results, looks_like_question, search_web
+from ..mind.guard import (
+    detect_injection, frame_data, frame_owner, frame_user, guard_output,
+    sanitize_user_text,
+)
 from ..llm import LLM
 
 SESSION_FILE = DATA_DIR / "qq_sessions.json"
@@ -210,6 +215,21 @@ class QqAgent:
         if self.store.is_muted(chat_key) and not is_owner:
             return
 
+        # ── 安全层1+2：输入消毒 + 高精度注入硬偏转（不进LLM，零token）──
+        text = sanitize_user_text(text)
+        if not is_owner:
+            hit = detect_injection(text)
+            if hit:
+                import random
+                from ..mind.guard import DEFLECTIONS
+                deflection = random.choice(DEFLECTIONS)
+                if is_group:
+                    await self.client.send_group_text(int(ev.get("group_id")), deflection, at_user=int(user_id))
+                else:
+                    await self.client.send_private_text(int(user_id), deflection)
+                print(f"  [防注入] 已偏转：{text[:30]}…（特征: {hit[:40]}）")
+                return
+
         # ── 花边播报：/瓜 口令或触发词（素材30分钟缓存，60秒内不重复生成）──
         gcfg = self.cfg.get("gossip") or {}
         gk = gcfg.get("keywords") or ["吃瓜", "八卦", "花边"]
@@ -356,7 +376,7 @@ class QqAgent:
         out = await asyncio.to_thread(
             self.llm.chat,
             [{"role": "system", "content": self.persona.get("system_prompt", "")},
-             {"role": "user", "content": BROADCAST_PROMPT + raw}],
+             {"role": "user", "content": BROADCAST_PROMPT + frame_data("是刚抓取的圈内资讯素材", raw)}],
             700,
         )
         self._gossip_text, self._gossip_ts = out.strip(), _t.time()
@@ -366,7 +386,7 @@ class QqAgent:
         """仅主人：/状态 /token /闭嘴 /回来 /全局闭嘴 /全局回来 /重置记忆 /帮助。"""
         head = cmd.split()[0] if cmd else ""
         if head == "帮助":
-            return ("口令：/状态 /token /闭嘴（本会话） /回来 /全局闭嘴 /全局回来 "
+            return ("口令：/状态 /token /搜 关键词（联网搜索） /闭嘴（本会话） /回来 /全局闭嘴 /全局回来 "
                     "/重置记忆（清空当前会话上下文）")
         if head == "状态":
             import subprocess
@@ -378,6 +398,12 @@ class QqAgent:
             return (f"📊 sprite 状态\nB站watch：{'运行中' if watch.returncode == 0 else '未运行'}\n"
                     f"QQ适配器：运行中\nNapCat：{nap}\n"
                     f"知识库：{kb_n} 块\n回复模式：{'闭嘴中' if self.store.mutes else '正常'}（{mutes}）")
+        if head == "搜":
+            kw = cmd.split(maxsplit=1)[1].strip() if " " in cmd else ""
+            if not kw:
+                return "用法：/搜 关键词"
+            items = search_web(kw, 5)
+            return "🔍 " + kw + "\n" + (format_results(items)[:1200] if items else "没搜到（换个词试试）")
         if head == "token":
             from ..logutil import usage_summary
 
@@ -453,8 +479,10 @@ class QqAgent:
         )
 
     async def _generate(self, chat_key: str, text: str, is_owner: bool = False,
-                        image_note: str = "", quote_note: str = "") -> str:
-        system = (self.persona.get("system_prompt") or "你是QQ群里的AI群友。") + QQ_SYSTEM_SUFFIX
+                        image_note: str = "", quote_note: str = "", uname: str = "群友") -> str:
+        from ..mind.guard import SECURITY_PREAMBLE
+        system = SECURITY_PREAMBLE.format(name=self.persona.get("name", "智谱娘")) + (
+            self.persona.get("system_prompt") or "你是QQ群里的AI群友。") + QQ_SYSTEM_SUFFIX
         if self.owner:
             system += (
                 f"\n你的主人（创造你的人）的QQ号是 {self.owner}，"
@@ -473,13 +501,27 @@ class QqAgent:
         for h in self.store.history(chat_key)[:-1]:  # 最后一条已拼入 user 消息；历史单条截长防膨胀
             c = h["content"]
             msgs.append({"role": h["role"], "content": c if len(c) <= 160 else c[:159] + "…"})
-        kb = self._kb_hint(text)
-        final_text = text
+        kb_raw = self._kb_hint(text)
+        kb = frame_data("是从本地知识库检索到的笔记片段", kb_raw) if kb_raw else ""
+        if not kb_raw and self.cfg.get("web_search", True) and looks_like_question(text):
+            import asyncio as _aio
+            try:
+                items = await _aio.to_thread(search_web, text, 5)
+                if items:
+                    kb = frame_data(
+                        "是联网搜索结果（知识库里没有相关内容时自动搜索）。"
+                        "回答可参考并注明来源链接，没有依据就直说不知道",
+                        format_results(items))
+                    print(f"  [联网] 搜索「{text[:24]}」命中{len(items)}条")
+            except Exception as e:
+                print(f"  [联网] 搜索失败: {e}")
         notes = " ".join(x for x in (image_note, quote_note) if x)
         if notes:
-            final_text = f"{notes} {text}".strip()
-        msgs.append({"role": "user", "content": (f"{kb}\n\n" if kb else "") + final_text})
+            notes = frame_data("是引用/图片等参考信息", notes)
+        body = (frame_owner("主人", text) if is_owner else frame_user(uname, text))
+        msgs.append({"role": "user", "content": "\n\n".join(x for x in (kb, notes, body) if x)})
         # 同步 requests 会卡死事件循环（收不了新消息），必须放线程池跑
         out = await asyncio.to_thread(self.llm.chat, msgs, 300)
+        out = guard_output(out, self.persona.get("name", "智谱娘"))
         limit = int(self.cfg.get("max_reply_chars", 200))
         return out if len(out) <= limit else out[: limit - 1] + "…"

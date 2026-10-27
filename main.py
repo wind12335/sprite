@@ -467,6 +467,16 @@ def cmd_ingest(args) -> None:
         print("[ingest] 加 --absorb 可直接解析入库（耗token）")
 
 
+def cmd_search(args) -> None:
+    """联网搜索测试：与QQ端自动搜索同款（必应无Key）。"""
+    from sprite.flow.websearch import format_results, search_web
+
+    items = search_web(args.query, 5)
+    if not items:
+        sys.exit("没搜到（被反爬或网络问题）")
+    print(format_results(items))
+
+
 def cmd_gossip(args) -> None:
     """花边播报测试：抓素材 → 人设口吻播报预览（QQ端触发词同款逻辑）。"""
     from sprite.flow.gossip import BROADCAST_PROMPT, build_gossip
@@ -630,6 +640,10 @@ def main() -> None:
     p_ing.add_argument("--absorb", action="store_true", help="下载后直接走论文解析入库（耗token）")
     p_ing.set_defaults(func=cmd_ingest)
 
+    p_ws = sub.add_parser("search", help="联网搜索测试（必应无Key，与QQ端同款）")
+    p_ws.add_argument("query", help="搜索词")
+    p_ws.set_defaults(func=cmd_search)
+
     p_go = sub.add_parser("gossip", help="花边播报测试：抓HN/Reddit/HF素材+人设播报预览")
     p_go.set_defaults(func=cmd_gossip)
 
@@ -665,7 +679,7 @@ def main() -> None:
     # 会发布内容或改写状态的命令加进程锁；QQ 用独立锁，绝不阻塞 B 站侧的 watch/social
     # 只读/分析类命令（抓取、解析、综述、问答、保洁）不抢锁，可随时与 watch 并行
     READONLY = ("status", "ask", "usage", "login", "paper", "daily-digest",
-                "distill", "ingest", "gossip", "housekeep")
+                "distill", "ingest", "gossip", "housekeep", "search")
     if args.cmd == "qq":
         acquire_lock("qq")
     elif args.cmd not in READONLY:
