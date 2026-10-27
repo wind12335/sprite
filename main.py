@@ -335,12 +335,18 @@ PAPER_PROMPT = """你是资深AI研究员。对下面这篇论文写一份深度
 
 
 def cmd_paper(args) -> None:
-    """论文入库：PDF → pdftotext提取 → LLM解析 → 知识库 + Obsidian。"""
+    """论文入库：PDF → pdftotext提取 → LLM解析 → 知识库 + Obsidian。
+    不带参数=吸收 data/papers 整个目录（已解析过的自动跳过）；也可显式指定PDF路径。"""
     import subprocess as _sp
 
     from sprite.obsidian_sync import sync_to_obsidian
 
     cfg = load_config()
+    if not args.files:
+        papers_dir = ROOT / (cfg.get("ingest") or {}).get("papers_dir", "data/papers")
+        args.files = sorted(str(f) for f in papers_dir.glob("*.pdf")) if papers_dir.exists() else []
+        if not args.files:
+            sys.exit(f"{papers_dir} 里没有PDF。先点「📥 抓新论文」，或把PDF放进去。")
     llm_cfg = cfg["llm"]
     deep = LLM(llm_cfg["base_url"], llm_cfg["api_key"], llm_cfg["model"],
                llm_cfg["temperature"], llm_cfg.get("thinking", False), timeout=300)
@@ -597,8 +603,8 @@ def main() -> None:
 
     sub.add_parser("usage", help="查看今日 token 消耗").set_defaults(func=cmd_usage)
 
-    p_paper = sub.add_parser("paper", help="论文入库：PDF→LLM解析→知识库+Obsidian")
-    p_paper.add_argument("files", nargs="+", help="PDF文件路径（可多个）")
+    p_paper = sub.add_parser("paper", help="论文入库（不带参数=吸收整个 data/papers 目录）")
+    p_paper.add_argument("files", nargs="*", help="PDF文件路径（可选；缺省扫 papers 目录）")
     p_paper.set_defaults(func=cmd_paper)
 
     p_dd = sub.add_parser("daily-digest", help="日期综述：该日所有报告→一篇综述→Obsidian")
