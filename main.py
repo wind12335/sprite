@@ -638,9 +638,12 @@ def main() -> None:
 
     args = parser.parse_args()
     # 会发布内容或改写状态的命令加进程锁；QQ 用独立锁，绝不阻塞 B 站侧的 watch/social
+    # 只读/分析类命令（抓取、解析、综述、问答、保洁）不抢锁，可随时与 watch 并行
+    READONLY = ("status", "ask", "usage", "login", "paper", "daily-digest",
+                "distill", "ingest", "gossip", "housekeep")
     if args.cmd == "qq":
         acquire_lock("qq")
-    elif args.cmd not in ("status", "ask", "usage"):
+    elif args.cmd not in READONLY:
         acquire_lock()
     if inspect.iscoroutinefunction(args.func):
         asyncio.run(args.func(args))
