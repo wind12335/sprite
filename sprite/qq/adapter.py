@@ -210,6 +210,19 @@ class QqAgent:
         if self.store.is_muted(chat_key) and not is_owner:
             return
 
+        # ── 花边播报：/瓜 口令或触发词（素材30分钟缓存，60秒内不重复生成）──
+        gcfg = self.cfg.get("gossip") or {}
+        gk = gcfg.get("keywords") or ["吃瓜", "八卦", "花边"]
+        if gcfg.get("enabled", True) and (text.startswith(("/瓜", "／瓜")) or any(k in text for k in gk)):
+            reply = await self._gossip_reply()
+            if reply:
+                if is_group:
+                    await self.client.send_group_text(int(ev.get("group_id")), reply)
+                else:
+                    await self.client.send_private_text(int(user_id), reply)
+                print(f"  [花边] 已播报（{chat_key}）")
+                return
+
         # ── 引用原文（群/私聊通用）：被引的原文进她的上下文 ──
         quote_note, reply_her = "", False
         if reply_id:
@@ -319,6 +332,35 @@ class QqAgent:
     # ---------- 内部 ----------
 
     # ---------- 主人口令 ----------
+
+    async def _gossip_reply(self) -> str | None:
+        """抓真实圈内资讯（HN/Reddit/HF博客）→ 人设口吻播报。素材走TTL缓存。"""
+        import asyncio
+        import time as _t
+
+        from ..flow.gossip import BROADCAST_PROMPT, build_gossip
+
+        if _t.time() - getattr(self, "_gossip_ts", 0) < 60:
+            return getattr(self, "_gossip_text", None)
+        gcfg = self.cfg.get("gossip") or {}
+        try:
+            raw = await asyncio.to_thread(
+                build_gossip, None, gcfg.get("subreddit", "MachineLearning"),
+                6, gcfg.get("cache_minutes", 30))
+        except Exception as e:
+            return f"瓜田网络打不通（{e}），晚点再来～"
+        if not raw:
+            self._gossip_text = "今天暂时没抓到圈内的新鲜瓜，晚点再试～"
+            self._gossip_ts = _t.time()
+            return self._gossip_text
+        out = await asyncio.to_thread(
+            self.llm.chat,
+            [{"role": "system", "content": self.persona.get("system_prompt", "")},
+             {"role": "user", "content": BROADCAST_PROMPT + raw}],
+            700,
+        )
+        self._gossip_text, self._gossip_ts = out.strip(), _t.time()
+        return self._gossip_text
 
     def _owner_command(self, cmd: str, chat_key: str) -> str | None:
         """仅主人：/状态 /token /闭嘴 /回来 /全局闭嘴 /全局回来 /重置记忆 /帮助。"""

@@ -120,3 +120,19 @@ napcat_dir = "/root/Napcat"  # NapCat目录（缓存体积监控）；与 NAPCAT
 napcat_base_mb = 1500        # NapCat体积基线(MB)，低于基线不提醒
 napcat_max_mb = 2000         # NapCat总体积超此MB在QQ里提醒清缓存
 notify_qq = true             # 保洁动作QQ私聊通知主人
+
+# ── 情报摄取 ingest：arXiv+HF日报→PDF；HF博客→资讯报告 ──────────
+[ingest]
+keywords = []              # 空=沿用 [watch].keywords（领域自动跟随）
+lookback_days = 3          # 只看最近N天提交的论文
+max_download = 5           # 每次最多下载几篇PDF（arXiv礼貌限速）
+papers_dir = "data/papers" # PDF落地目录，「吸收论文」从这挑；--absorb 则直接解析入库
+hf_daily_limit = 10        # HF日报取几篇（社区热度优先）
+hf_blog = true             # 抓HF官方博客 → data/reports 资讯报告（进每日综述）
+
+# ── QQ花边播报：真实圈内资讯（HN/Reddit/HF博客）+ 人设口吻 ────────
+[qq.gossip]
+enabled = true
+keywords = ["吃瓜", "八卦", "花边"]   # 群里说这些词、或发 /瓜 触发播报
+subreddit = "MachineLearning"        # Reddit版块，跟随你的领域换
+cache_minutes = 30                   # 素材缓存（防API刷爆）

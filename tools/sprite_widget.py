@@ -322,6 +322,7 @@ class Widget:
             ("💬 QQ 停止", lambda: self._run("./stop.sh qq", "QQ停止"), "#ef5350"),
             ("📝 今日综述", lambda: self._run(".venv/bin/python -u main.py daily-digest --prune 2>&1 | tail -10", "综述", timeout=420), "#FF9800"),
             ("🕐 补昨日综述", lambda: self._run(".venv/bin/python -u main.py daily-digest --date $(date -d yesterday +%F) --prune 2>&1 | tail -12", "补综述", timeout=420), "#FF7043"),
+            ("📥 抓新论文", lambda: self._run(".venv/bin/python -u main.py ingest --absorb 2>&1 | tail -12", "抓论文", timeout=600), "#795548"),
             ("📄 吸收论文", self._pick_paper, "#8BC34A"),
             ("📊 状态", lambda: self._run("./status.sh 2>&1", "状态"), "#3F51B5"),
             ("🧹 保洁", lambda: self._run(".venv/bin/python -u main.py housekeep --no-notify 2>&1 | tail -5", "保洁"), "#9C27B0"),

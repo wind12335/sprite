@@ -37,7 +37,8 @@
 | QQ | NapCat/OneBot v11，人设对话、@/关键词/私聊触发、图片理解（需多模态模型）、主人识别、/命令、防刷屏防杠精、两级禁言 |
 | 知识 | 报告入库→TF-IDF 检索（纯本地零依赖）；`distill` 把相关报告蒸馏成综述；MemGPT 式会话归档 |
 | Obsidian | 所有报告/综述/论文笔记带 YAML frontmatter 写入你的 vault |
-| 论文 | PDF→LLM 解析→结构化笔记→知识库+Obsidian |
+| 论文 | PDF→LLM 解析→结构化笔记→知识库+Obsidian；`ingest` 自动抓 arXiv/HF 日报新论文落盘、HF博客进资讯报告 |
+| QQ花边 | 群里说"吃瓜/八卦"或发 `/瓜`：抓 HN/Reddit/HF 真实圈内资讯，人设口吻播报（领域跟随你的关键词） |
 | 桌宠 | Windows tkinter 无边框置顶小部件：B站/QQ 一键启停、今日/补昨日综述、吸收论文、状态、保洁、编辑配置 |
 
 ## 安装（一步一步来）
@@ -126,6 +127,8 @@ NapCat 是 QQ 的 OneBot v11 实现，sprite 通过 WebSocket 与它通信。按
 crontab -e
 # 每2小时跑一轮B站情报
 0 */2 * * * cd ~/workspace/sprite && .venv/bin/python -u main.py watch --once >> run.log 2>&1
+# 每天早8点抓新论文+HF资讯（加 --absorb 直接解析入库）
+0 8 * * * cd ~/workspace/sprite && .venv/bin/python -u main.py ingest >> run.log 2>&1
 # NapCat 看门狗：掉线自动拉起
 */5 * * * * ~/workspace/sprite/scripts/napcat_watchdog.sh >> /dev/null 2>&1
 ```

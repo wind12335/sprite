@@ -391,6 +391,78 @@ def cmd_paper(args) -> None:
     print(f"\n今日 token：{usage_summary()}")
 
 
+def cmd_ingest(args) -> None:
+    """情报摄取：arXiv检索+HF日报 → PDF入 data/papers；HF博客 → 资讯报告；--absorb 直接入库。"""
+    import datetime
+    import json as _json
+
+    from sprite.flow.ingest import download_pdfs, fetch_arxiv, fetch_hf_blog, fetch_hf_daily
+
+    cfg = load_config()
+    ing = cfg.get("ingest") or {}
+    keywords = ing.get("keywords") or cfg["watch"]["keywords"]
+    days = ing.get("lookback_days", 3)
+    papers_dir = ROOT / ing.get("papers_dir", "data/papers")
+    seen_f = ROOT / "data/ingest_seen.json"
+
+    seen = set()
+    if seen_f.exists():
+        try:
+            seen = set(_json.loads(seen_f.read_text()))
+        except Exception:
+            pass
+
+    print(f"[ingest] arXiv 检索（近{days}天）：{' / '.join(keywords[:6])}")
+    papers = fetch_arxiv(keywords, days=days)
+    print(f"  命中 {len(papers)} 篇")
+    hf = fetch_hf_daily(ing.get("hf_daily_limit", 10))
+    print(f"[ingest] HF 日报 {len(hf)} 篇（社区热度优先并入）")
+    merged = {p["id"]: p for p in papers}
+    for p in sorted(hf, key=lambda x: -(x.get("upvotes") or 0)):
+        merged.setdefault(p["id"], p)
+
+    got = download_pdfs(list(merged.values()), papers_dir, seen, ing.get("max_download", 5))
+    seen_f.write_text(_json.dumps(sorted(seen)[-2000:]))
+    print(f"[ingest] ✅ 新下载 {len(got)} 篇 → {papers_dir}")
+
+    if ing.get("hf_blog", True):
+        posts = fetch_hf_blog(5)
+        if posts:
+            today = datetime.date.today()
+            out = ROOT / cfg["watch"]["report_dir"] / f"{today}_hf资讯.md"
+            out.parent.mkdir(parents=True, exist_ok=True)
+            body = "\n".join(f"- [{p['title']}]({p['link']})" for p in posts)
+            out.write_text(f"> HF 官方博客近5篇（{today}，ingest 自动抓取）\n\n{body}\n", encoding="utf-8")
+            print(f"[ingest] ✅ 资讯报告：{out}")
+
+    if args.absorb and got:
+        print("[ingest] --absorb：转入论文解析管线…")
+        cmd_paper(argparse.Namespace(files=[str(f) for _, f in got]))
+    elif got:
+        print("[ingest] 加 --absorb 可直接解析入库（耗token）")
+
+
+def cmd_gossip(args) -> None:
+    """花边播报测试：抓素材 → 人设口吻播报预览（QQ端触发词同款逻辑）。"""
+    from sprite.flow.gossip import BROADCAST_PROMPT, build_gossip
+
+    cfg = load_config()
+    raw = build_gossip()
+    if not raw:
+        sys.exit("暂无匹配资讯（领域关键词太窄或数据源都空了），缓存30分钟。")
+    print("═══ 原始素材 ═══\n" + raw + "\n═══ 人设播报 ═══")
+    llm_cfg = cfg["llm"]
+    deep = LLM(llm_cfg["base_url"], llm_cfg["api_key"], llm_cfg["model"],
+               llm_cfg["temperature"], llm_cfg.get("thinking", False), timeout=120)
+    out = deep.chat(
+        [{"role": "system", "content": cfg["persona"].get("system_prompt", "")},
+         {"role": "user", "content": BROADCAST_PROMPT + raw}],
+        max_tokens=700,
+    )
+    print(out)
+    print(f"\n今日 token：{usage_summary()}")
+
+
 def _undigested_dates(report_dir, skip=(), days=7):
     """近N天内：有报告但还没生成综述的日期 → [(日期, 报告数), ...]。"""
     import datetime
@@ -528,6 +600,13 @@ def main() -> None:
     p_dd.add_argument("--date", help="指定日期 YYYY-MM-DD（默认今天；忘点可补任何一天）")
     p_dd.add_argument("--prune", action="store_true", help="综述后归档该日原始报告")
     p_dd.set_defaults(func=cmd_daily_digest)
+
+    p_ing = sub.add_parser("ingest", help="情报摄取：arXiv+HF论文→PDF入库，HF博客→资讯报告")
+    p_ing.add_argument("--absorb", action="store_true", help="下载后直接走论文解析入库（耗token）")
+    p_ing.set_defaults(func=cmd_ingest)
+
+    p_go = sub.add_parser("gossip", help="花边播报测试：抓HN/Reddit/HF素材+人设播报预览")
+    p_go.set_defaults(func=cmd_gossip)
 
     p_hk = sub.add_parser("housekeep", help="手动保洁：旧会话清理/日志裁尾/知识库体量检查")
     p_hk.add_argument("--no-notify", dest="notify", action="store_false",
