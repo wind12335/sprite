@@ -76,6 +76,14 @@ def _bing(query: str, max_items: int, timeout: int) -> list[dict]:
     return out
 
 
+_CHATTER = re.compile(r"我(想|要)?(搜索|搜|查)(了|一下)?|帮我|麻烦|好好|查查|看看|一下|你(知道|去|给)?|请问|到底|究竟|呗|呢|啊|吗|？|\?|。|，")
+
+def clean_query(text: str) -> str:
+    """从口语消息里提炼搜索词：剥掉对话性缀词，残骸太短就用原文。"""
+    q = _CHATTER.sub("", text).strip()
+    return q if len(q) >= 2 else text.strip()
+
+
 def search_web(query: str, max_items: int = 5, timeout: int = 15) -> list[dict]:
     """双引擎：搜狗优先（公司/实体/长尾中文词强）+ 必应补充（技术内容强）；
     按 域名+标题前8字 去重；同query缓存30分钟。"""

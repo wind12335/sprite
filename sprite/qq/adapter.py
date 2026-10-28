@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 
 from ..config import DATA_DIR
-from ..flow.websearch import format_results, looks_like_question, search_web
+from ..flow.websearch import clean_query, format_results, looks_like_question, search_web
 from ..mind.guard import (
     detect_injection, frame_data, frame_owner, frame_user, guard_output,
     sanitize_user_text,
@@ -503,23 +503,24 @@ class QqAgent:
             msgs.append({"role": h["role"], "content": c if len(c) <= 160 else c[:159] + "…"})
         kb_raw = self._kb_hint(text)
         kb = frame_data("是从本地知识库检索到的笔记片段", kb_raw) if kb_raw else ""
-        if not kb_raw and self.cfg.get("web_search", True) and looks_like_question(text):
+        web = ""
+        if self.cfg.get("web_search", True) and looks_like_question(text):
             import asyncio as _aio
             try:
-                items = await _aio.to_thread(search_web, text, 5)
+                items = await _aio.to_thread(search_web, clean_query(text), 5)
                 if items:
-                    kb = frame_data(
-                        "是联网搜索结果（知识库里没有相关内容时自动搜索）。"
-                        "回答可参考并注明来源链接，没有依据就直说不知道",
+                    web = frame_data(
+                        "是联网搜索结果（自动搜索补充）。知识库内容若与问题无关就忽略它，"
+                        "优先依据搜索结果回答并注明来源链接；两边都无关就直说不知道",
                         format_results(items))
-                    print(f"  [联网] 搜索「{text[:24]}」命中{len(items)}条")
+                    print(f"  [联网] 搜索「{clean_query(text)[:24]}」命中{len(items)}条")
             except Exception as e:
                 print(f"  [联网] 搜索失败: {e}")
         notes = " ".join(x for x in (image_note, quote_note) if x)
         if notes:
             notes = frame_data("是引用/图片等参考信息", notes)
         body = (frame_owner("主人", text) if is_owner else frame_user(uname, text))
-        msgs.append({"role": "user", "content": "\n\n".join(x for x in (kb, notes, body) if x)})
+        msgs.append({"role": "user", "content": "\n\n".join(x for x in (kb, web, notes, body) if x)})
         # 同步 requests 会卡死事件循环（收不了新消息），必须放线程池跑
         out = await asyncio.to_thread(self.llm.chat, msgs, 300)
         out = guard_output(out, self.persona.get("name", "智谱娘"))
