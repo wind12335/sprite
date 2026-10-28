@@ -70,6 +70,14 @@ description = ""
 
 ## 已完成（2026-10）
 
+### 第二批（10-27/28 晚）
+- 防提示词注入四层防御（guard.py：消毒/隔离/硬偏转/输出审计）
+- 联网搜索：搜狗+必应双引擎无Key，QQ自动搜索 + `/搜` 口令 + `search` 命令
+- 论文情报摄取 `ingest`：arXiv+HF日报→PDF队列→自动精读→归档（papers/absorbed）
+- QQ花边播报（HN/Reddit/HF真实资讯+人设口吻，30min缓存）
+- 锁语义修正：只读命令不再与watch互斥；paper扫仓模式+跨天防重
+
+
 - v20 桌宠：状态表情四态 + 点击反馈 + 人设包取名 + 单实例锁 + 飞行记录仪
 - 人设包最小版（name + system_prompt）、官方小精灵四态套图、自定义形象姊妹帧约定
 - 模型厂商解耦（OpenAI 兼容 + thinking 参数条件发送）、仓库结构规范化（scripts/assets/docs）
