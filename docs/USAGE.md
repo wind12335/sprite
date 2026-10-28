@@ -32,6 +32,9 @@ python main.py watch                                  # 正式运行
 | 命令 | 作用 | 关键参数 | 发布行为 |
 |---|---|---|---|
 | `login` | 扫码登录，凭据存 `data/credential.json` | — | 无 |
+| `ingest` | 情报摄取：arXiv关键词+HF日报→PDF入`data/papers`；HF博客→资讯报告；`--absorb`直接解析入库 | 网络只读 | 低（无LLM；`--absorb`按论文数） |
+| `gossip` | 花边播报预览：HN/Reddit/HF素材→人设播报（QQ端触发词同款） | 网络只读 | 一次问答 |
+| `search` | 联网搜索测试（搜狗+必应双引擎，与QQ端自动搜索同款） | 网络只读 | 无 |
 | `status` | 查看登录身份与最近投稿 | — | 无 |
 | `watch` | 视频情报流水线（核心） | `--once` `--dry-run` | 动态@我 / 视频下评论 / 专栏(实验) |
 | `ask` | 查询知识库（视频解析笔记） | `<query>` | 无 |
