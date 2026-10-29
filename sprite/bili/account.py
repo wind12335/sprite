@@ -189,8 +189,7 @@ class Bili:
         bd = dynamic.BuildDynamic()
         bd.add_text(text)
         for p in image_paths:
-            up = await dynamic.upload_image(image=Picture.from_file(p), credential=self.cred)
-            bd.add_image(up)
+            bd.add_image(Picture.from_file(p))  # add_image内部完成上传
         return await dynamic.send_dynamic(info=bd, credential=self.cred)
 
     async def post_text_dynamic(self, text: str) -> dict:

@@ -199,7 +199,8 @@ class Watcher:
         safety_cfg: dict | None = None,
         hk_cfg: dict | None = None,
         qq_cfg: dict | None = None,
-        dry_run: bool = False,, vision=None
+        dry_run: bool = False,
+        vision=None
     ):
         self.bili = bili
         self.deep = deep_llm
@@ -488,7 +489,8 @@ class Watcher:
         imgs = (r.json().get("data") or {}).get("image") or []
         if not imgs:
             return ""
-        spr = Image.open(io.BytesIO(_rq.get(imgs[0], timeout=15).content))
+        _u = imgs[0] if imgs[0].startswith("http") else "https:" + imgs[0]
+        spr = Image.open(io.BytesIO(_rq.get(_u, timeout=15).content))
         cols, rows = 10, 3
         fw, fh = spr.width // cols, spr.height // rows
         urls = []

@@ -50,11 +50,12 @@ start_qq() {
 }
 
 start_bili() {
-  if pgrep -f "main.py watch" > /dev/null; then echo "[B站] watch 已在运行"; return; fi
-  nohup $PY -u main.py watch > run.log 2>&1 &
+  if pgrep -f "main.py watch" > /dev/null; then echo "[B站] 上一轮扫描还在进行，稍后再点"; return; fi
+  # 随用随点：每点一次跑一轮完整流水线（搜→筛→深析→图文动态→评论），跑完自动退出
+  nohup $PY -u main.py watch --once > run.log 2>&1 &
   echo $! > data/watch.pid
   sleep 2
-  echo "[B站] ✅ watch 常驻已启动（每2小时一轮，日志 run.log，PID $(cat data/watch.pid)）"
+  echo "[B站] ✅ 本轮扫描已启动（跑完自动退出，日志 run.log）"
 }
 
 start_widget() {
