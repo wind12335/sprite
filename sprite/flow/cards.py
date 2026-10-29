@@ -28,10 +28,18 @@ def make_card(deep_llm, title: str, notes: str, out_dir: Path) -> Path | None:
     if not m:
         return None
     out_dir.mkdir(parents=True, exist_ok=True)
-    out = out_dir / f"card_{re.sub(r'[\\s/:|]', '_', title)[:30]}.png"
+    import datetime as _dt
+    out = out_dir / f"card_{_dt.date.today()}_{re.sub(r'[\\s/:|]', '_', title)[:24]}.png"
     try:
         cairosvg.svg2png(bytestring=m.group(0).encode("utf-8"),
                          write_to=str(out), output_width=1200)
-        return out
     except Exception:
         return None
+    # 自清理：PNG只是报告的投影（可随时重生成），只留最近60张防无限堆积
+    olds = sorted(out_dir.glob("card_*.png"), key=lambda f: f.stat().st_mtime)
+    for f in olds[:-60]:
+        try:
+            f.unlink()
+        except OSError:
+            pass
+    return out
