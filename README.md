@@ -29,6 +29,26 @@
                     └────────────────┘
 ```
 
+## 常用命令速查（WSL 内执行）
+
+```bash
+cd ~/workspace/sprite          # 你的运行目录（从GitHub clone的则是 sprite）
+
+./start.sh widget              # 🐟 启动/重启 Windows 桌宠（自动停旧实例、部署最新代码）
+./start.sh bili                # 启动 B站侧（watch 常驻，每2小时一轮）
+./start.sh qq                  # 启动 QQ侧（自动拉 NapCat 并等就绪）
+./start.sh all                 # 两侧都启动
+./stop.sh all                  # 全停（也可 ./stop.sh qq / bili）
+./status.sh                    # 查看各进程/端口状态
+
+.venv/bin/python main.py paper # 📄 吸收 data/papers 里全部未解析论文
+tail -f run.log                # 实时看 B站侧在干什么
+tail -f qq.log                 # 实时看 QQ侧
+```
+
+> 🐟 桌宠忘了命令也能启动：**直接双击 `D:\sprite_widget.py`**（部署副本可独立运行，
+> 有单实例锁不会双开；但拿不到最新代码更新——更新代码后还是要跑一次 `./start.sh widget`）。
+
 ## 功能总览
 
 | 端 | 能力 |
