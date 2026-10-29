@@ -168,10 +168,11 @@ class QqAgent:
     """消息事件 → 是否回应 / 生成回复 / 发送。"""
 
     def __init__(self, client, llm: LLM, persona: dict, qq_cfg: dict, kb=None, store: QqStore | None = None,
-                 vision_llm: LLM | None = None):
+                 vision_llm: LLM | None = None, screen_llm=None):
         self.client = client
         self.llm = llm
         self.persona = persona
+        self.screen_llm = screen_llm  # flash路由器（工具决策），None=主模型兼任
         self.cfg = qq_cfg
         self.kb = kb
         self.store = store or QqStore()
@@ -512,7 +513,8 @@ class QqAgent:
             from ..mind.tools import ToolBus, build_tools
             trace = []
             bus = ToolBus(self.llm, build_tools(kb=self.kb),
-                          int(self.cfg.get("tool_max_iters", 3)))
+                          int(self.cfg.get("tool_max_iters", 3)),
+                          router_llm=getattr(self, "screen_llm", None))
             out = await asyncio.to_thread(bus.run, system, user_content, 600, trace)
             for name, q, _r in trace:
                 print(f"  [工具] {name}({q[:20]})")

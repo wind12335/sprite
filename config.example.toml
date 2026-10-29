@@ -18,6 +18,7 @@ temperature = 0.8
 thinking = false
 
 # 快筛模型（第一级）：长上下文、便宜，负责"是否相关 + 短摘要"。换厂商时同改（如 qwen-turbo）
+# v2起兼任 QQ 工具总线的路由器（决定调kb/搜索/资讯的机械决策），进一步压低单次问答成本
 # base_url / api_key 不填则继承上面的 [llm]
 [llm_screen]
 model = "glm-5.3-flash"

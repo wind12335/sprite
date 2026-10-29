@@ -121,6 +121,11 @@ def cmd_ask(args) -> None:
     cfg = load_config()
     llm_cfg = cfg["llm"]
     kb = Knowledge(ROOT / cfg["watch"]["report_dir"])
+    sc = cfg["llm_screen"]
+    screen_llm = LLM(sc.get("base_url") or llm_cfg["base_url"],
+                     sc.get("api_key") or llm_cfg["api_key"],
+                     sc.get("model", "glm-5.3-flash"),
+                     sc.get("temperature", 0.2), False, timeout=60)
     hits = kb.search(args.query, k=5)
     if not hits:
         sys.exit("知识库为空或没有相关笔记（先跑几轮 watch 积累报告）。")
@@ -304,7 +309,7 @@ async def cmd_qq(_args) -> None:
     if qq_cfg.get("vision_model"):
         vision_llm = LLM(llm_cfg["base_url"], llm_cfg["api_key"], qq_cfg["vision_model"],
                          temperature=0.3, thinking=False)
-    agent = QqAgent(client, llm, cfg["persona"], qq_cfg, kb=kb, vision_llm=vision_llm)
+    agent = QqAgent(client, llm, cfg["persona"], qq_cfg, kb=kb, vision_llm=vision_llm, screen_llm=screen_llm)
     client.on_message = agent.on_message
     print(f"智谱娘 QQ 模式：{qq_cfg['ws_url']}（Ctrl+C 退出，断线自动重连）")
     print(f"触发方式：群里@她 / 说「{cfg['persona'].get('name', '')}」/ 私聊直接说；知识库 {kb.size()} 块已挂载")
@@ -487,7 +492,10 @@ def cmd_agent(args) -> None:
     deep = LLM(llm_cfg["base_url"], llm_cfg["api_key"], llm_cfg["model"],
                llm_cfg["temperature"], llm_cfg.get("thinking", False), timeout=180)
     kb = Knowledge(ROOT / cfg["watch"]["report_dir"])
-    bus = ToolBus(deep, build_tools(kb=kb), 3)
+    sc = cfg["llm_screen"]
+    router = LLM(sc.get("base_url") or llm_cfg["base_url"], sc.get("api_key") or llm_cfg["api_key"],
+                 sc.get("model", "glm-5.3-flash"), sc.get("temperature", 0.2), False, timeout=60)
+    bus = ToolBus(deep, build_tools(kb=kb), 3, router_llm=router)
     system = cfg["persona"].get("system_prompt", "")
     trace = []
     out = bus.run(system, args.query, 800, trace)
