@@ -501,6 +501,25 @@ class QqAgent:
         for h in self.store.history(chat_key)[:-1]:  # 最后一条已拼入 user 消息；历史单条截长防膨胀
             c = h["content"]
             msgs.append({"role": h["role"], "content": c if len(c) <= 160 else c[:159] + "…"})
+        notes = " ".join(x for x in (image_note, quote_note) if x)
+        if notes:
+            notes = frame_data("是引用/图片等参考信息", notes)
+        body = (frame_owner("主人", text) if is_owner else frame_user(uname, text))
+        user_content = "\n\n".join(x for x in (notes, body) if x)
+
+        # ── v2 工具总线：模型自主决定 kb_search/web_search/feed_news ──
+        if self.cfg.get("tool_bus", True):
+            from ..mind.tools import ToolBus, build_tools
+            trace = []
+            bus = ToolBus(self.llm, build_tools(kb=self.kb),
+                          int(self.cfg.get("tool_max_iters", 3)))
+            out = await asyncio.to_thread(bus.run, system, user_content, 600, trace)
+            for name, q, _r in trace:
+                print(f"  [工具] {name}({q[:20]})")
+            out = guard_output(out, self.persona.get("name", "智谱娘"))
+            limit = int(self.cfg.get("max_reply_chars", 200))
+            return out if len(out) <= limit else out[: limit - 1] + "…"
+
         kb_raw = self._kb_hint(text)
         kb = frame_data("是从本地知识库检索到的笔记片段", kb_raw) if kb_raw else ""
         web = ""
@@ -516,11 +535,7 @@ class QqAgent:
                     print(f"  [联网] 搜索「{clean_query(text)[:24]}」命中{len(items)}条")
             except Exception as e:
                 print(f"  [联网] 搜索失败: {e}")
-        notes = " ".join(x for x in (image_note, quote_note) if x)
-        if notes:
-            notes = frame_data("是引用/图片等参考信息", notes)
-        body = (frame_owner("主人", text) if is_owner else frame_user(uname, text))
-        msgs.append({"role": "user", "content": "\n\n".join(x for x in (kb, web, notes, body) if x)})
+        msgs.append({"role": "user", "content": "\n\n".join(x for x in (kb, web, user_content) if x)})
         # 同步 requests 会卡死事件循环（收不了新消息），必须放线程池跑
         out = await asyncio.to_thread(self.llm.chat, msgs, 300)
         out = guard_output(out, self.persona.get("name", "智谱娘"))

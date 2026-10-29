@@ -477,6 +477,27 @@ def cmd_search(args) -> None:
     print(format_results(items))
 
 
+def cmd_agent(args) -> None:
+    """Agent模式测试：工具总线全链路（kb/web/news 自主调用），打印调用轨迹。"""
+    from sprite.mind import Knowledge
+    from sprite.mind.tools import ToolBus, build_tools
+
+    cfg = load_config()
+    llm_cfg = cfg["llm"]
+    deep = LLM(llm_cfg["base_url"], llm_cfg["api_key"], llm_cfg["model"],
+               llm_cfg["temperature"], llm_cfg.get("thinking", False), timeout=180)
+    kb = Knowledge(ROOT / cfg["watch"]["report_dir"])
+    bus = ToolBus(deep, build_tools(kb=kb), 3)
+    system = cfg["persona"].get("system_prompt", "")
+    trace = []
+    out = bus.run(system, args.query, 800, trace)
+    for name, q, r in trace:
+        print(f"  🔧 {name}({q[:24]}) → {r[:60]}…")
+    print("\n═══ 回答 ═══")
+    print(out)
+    print(f"\n今日 token：{usage_summary()}")
+
+
 def cmd_gossip(args) -> None:
     """花边播报测试：抓素材 → 人设口吻播报预览（QQ端触发词同款逻辑）。"""
     from sprite.flow.gossip import BROADCAST_PROMPT, build_gossip
@@ -644,6 +665,10 @@ def main() -> None:
     p_ws.add_argument("query", help="搜索词")
     p_ws.set_defaults(func=cmd_search)
 
+    p_ag = sub.add_parser("agent", help="Agent模式测试：工具总线自主调用kb/搜索/资讯")
+    p_ag.add_argument("query", help="问题")
+    p_ag.set_defaults(func=cmd_agent)
+
     p_go = sub.add_parser("gossip", help="花边播报测试：抓HN/Reddit/HF素材+人设播报预览")
     p_go.set_defaults(func=cmd_gossip)
 
@@ -679,7 +704,7 @@ def main() -> None:
     # 会发布内容或改写状态的命令加进程锁；QQ 用独立锁，绝不阻塞 B 站侧的 watch/social
     # 只读/分析类命令（抓取、解析、综述、问答、保洁）不抢锁，可随时与 watch 并行
     READONLY = ("status", "ask", "usage", "login", "paper", "daily-digest",
-                "distill", "ingest", "gossip", "housekeep", "search")
+                "distill", "ingest", "gossip", "housekeep", "search", "agent")
     if args.cmd == "qq":
         acquire_lock("qq")
     elif args.cmd not in READONLY:

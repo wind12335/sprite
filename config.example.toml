@@ -60,7 +60,9 @@ group_whitelist = []             # 允许的群号；空=所有群（黑名单�
 group_blacklist = []             # 拒绝的群号
 reply_private = true             # 是否回应私聊
 owner_qq = 0                     # ★主人QQ号：人设认知（对话标注"主人"、更亲近）、私聊免冷却
-web_search = true             # 知识库检索不到且像事实性问题时，自动联网搜索（必应无Key）并带来源回答
+tool_bus = true               # v2 工具总线：模型自主决定调用 kb_search/web_search/feed_news（关掉则回退v1自动搜索）
+tool_max_iters = 3           # 单次回答最多几轮工具调用
+web_search = true            # （v1回退路径）知识库检索不到且像事实性问题时自动联网搜索
 vision_model = "glm-4.6v"        # 图片理解需多模态模型：glm-4.6v / qwen-vl-plus / gpt-4o等；
                                  # 服务商无视觉模型（如DeepSeek）就置空""，功能自动禁用
 image_trigger_groups = []       # 这些群里所有人裸发图都触发识别（空=仅主人/引用她的消息/@触发）
