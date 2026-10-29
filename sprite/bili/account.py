@@ -181,6 +181,18 @@ class Bili:
             credential=self.cred,
         )
 
+    async def post_image_dynamic(self, text: str, image_paths: list) -> dict:
+        """图文动态：图片上传后与文字一起发。失败抛异常由调用方回退纯文字。"""
+        from bilibili_api import dynamic
+        from bilibili_api.utils.picture import Picture
+
+        bd = dynamic.BuildDynamic()
+        bd.add_text(text)
+        for p in image_paths:
+            up = await dynamic.upload_image(image=Picture.from_file(p), credential=self.cred)
+            bd.add_image(up)
+        return await dynamic.send_dynamic(info=bd, credential=self.cred)
+
     async def post_text_dynamic(self, text: str) -> dict:
         info = dynamic.BuildDynamic.create_by_args(text=text)
         return await dynamic.send_dynamic(info=info, credential=self.cred)

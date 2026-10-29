@@ -199,7 +199,7 @@ class Watcher:
         safety_cfg: dict | None = None,
         hk_cfg: dict | None = None,
         qq_cfg: dict | None = None,
-        dry_run: bool = False,
+        dry_run: bool = False,, vision=None
     ):
         self.bili = bili
         self.deep = deep_llm
@@ -393,6 +393,17 @@ class Watcher:
                               verdict.get("digest", ""))
             return
 
+        # 关键帧视觉：B站官方缩略图网格(免下载视频)→视觉模型提取画面信息
+        if getattr(self, "vision", None) and self.cfg.get("vision_frames", True):
+            try:
+                import asyncio as _a
+                vnote = await _a.to_thread(self._vision_notes, item["bvid"], info)
+                if vnote:
+                    deep_input += f"\n\n【画面关键帧信息】{vnote[:1200]}"
+                    print(f"  {tag} 画面理解已并入")
+            except Exception as e:
+                print(f"  {tag} 画面理解跳过: {e}")
+
         report_md = self.deep.chat(
             [
                 {
@@ -433,7 +444,25 @@ class Watcher:
             if self.dry_run:
                 print(f"  【DRY-RUN】将发动态@{self._master_uname}：\n    {text[:100]}…")
             else:
-                result = await self.bili.post_dynamic_at(text, self.cfg["master_uid"], self._master_uname)
+                card = None
+                if self.cfg.get("knowledge_card", True):
+                    try:
+                        from .cards import make_card
+                        card = make_card(self.deep, item["title"][:24],
+                                         f"# {item['title']}\n{report_md}", self.root / "data/cards")
+                        if card:
+                            print(f"  {tag} 知识卡片：{card.name}")
+                    except Exception as e:
+                        print(f"  {tag} 卡片生成跳过: {e}")
+                if card:
+                    try:
+                        result = await self.bili.post_image_dynamic(
+                            text if "🤖" in text else text.rstrip() + " 🤖AI生成", [str(card)])
+                    except Exception as e:
+                        print(f"  {tag} 图文动态失败({e})，回退纯文字")
+                        card = None
+                if not card:
+                    result = await self.bili.post_dynamic_at(text, self.cfg["master_uid"], self._master_uname)
                 self.mem.bump("watch_dynamic")
                 self.dyn_hist.add(result.get("dyn_id") if isinstance(result, dict) else None, text)
                 print(f"  {tag} 已发动态@{self._master_uname}")
@@ -441,6 +470,40 @@ class Watcher:
             print("  今日动态配额已满，仅存报告/专栏。")
 
         await self._comment_on_video(tag, item, info, verdict.get("digest", ""), report_md)
+
+    def _vision_notes(self, bvid: str, info: dict) -> str:
+        """videoshot精灵图→切帧→4.6v提取(PPT/图表/演示)，无帧返回空串。"""
+        import base64
+        import io
+
+        import requests as _rq
+        from PIL import Image
+
+        cid = (info.get("pages") or [{}])[0].get("cid")
+        if not cid:
+            return ""
+        r = _rq.get("https://api.bilibili.com/x/player/videoshot",
+                    params={"bvid": bvid, "cid": cid, "index": "1"}, timeout=10,
+                    headers={"User-Agent": "Mozilla/5.0"})
+        imgs = (r.json().get("data") or {}).get("image") or []
+        if not imgs:
+            return ""
+        spr = Image.open(io.BytesIO(_rq.get(imgs[0], timeout=15).content))
+        cols, rows = 10, 3
+        fw, fh = spr.width // cols, spr.height // rows
+        urls = []
+        for idx in (0, 7, 14, 21, 26):
+            if idx >= cols * rows:
+                continue
+            box = ((idx % cols) * fw, (idx // cols) * fh, (idx % cols) * fw + fw, (idx // cols) * fh + fh)
+            buf = io.BytesIO()
+            spr.crop(box).resize((fw * 2, fh * 2)).save(buf, format="JPEG", quality=80)
+            urls.append("data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode())
+        if not urls:
+            return ""
+        return self.vision.chat_vision(
+            urls, "这是同一个视频的若干关键帧截图。简述画面里出现了什么"
+                  "（PPT要点/代码/图表/演示/场景），供文字解析参考，200字内。")
 
     async def _comment_on_video(
         self, tag: str, item: dict, info: dict, digest: str, report_md: str

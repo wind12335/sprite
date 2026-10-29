@@ -87,6 +87,15 @@ async def cmd_dynamic(args) -> None:
     print(f"动态已发布：{result.get('dyn_id', result)}")
 
 
+def _mk_vision(cfg, llm_cfg):
+    """关键帧视觉模型（[qq].vision_model，如 glm-4.6v）；空则禁用。"""
+    vm = (cfg.get("qq") or {}).get("vision_model") or ""
+    if not vm:
+        return None
+    from sprite.llm import LLM
+    return LLM(llm_cfg["base_url"], llm_cfg["api_key"], vm, 0.2, False, timeout=120)
+
+
 async def cmd_watch(args) -> None:
     cfg = load_config()
     llm_cfg = cfg["llm"]
@@ -112,6 +121,7 @@ async def cmd_watch(args) -> None:
         hk_cfg=cfg.get("housekeep"),
         qq_cfg=cfg.get("qq"),
         dry_run=args.dry_run,
+        vision=_mk_vision(cfg, llm_cfg),
     )
     await watcher.run(once=args.once)
 
@@ -482,6 +492,32 @@ def cmd_search(args) -> None:
     print(format_results(items))
 
 
+def cmd_card(args) -> None:
+    """知识卡片：知识库主题 → LLM设计SVG → PNG（--post 发布图文动态）。"""
+    import asyncio
+
+    from sprite.flow.cards import make_card
+    from sprite.mind import Knowledge
+
+    cfg = load_config()
+    llm_cfg = cfg["llm"]
+    deep = LLM(llm_cfg["base_url"], llm_cfg["api_key"], llm_cfg["model"],
+               llm_cfg["temperature"], llm_cfg.get("thinking", False), timeout=180)
+    kb = Knowledge(ROOT / cfg["watch"]["report_dir"])
+    hits = kb.search(args.topic, k=3)
+    notes = "\n\n".join(f"【{h.get('file', '')}】{h.get('text', '')[:800]}" for h in hits) or args.topic
+    print(f"素材：{len(hits)} 篇命中，生成卡片中…")
+    out = make_card(deep, args.topic, notes, ROOT / "data/cards")
+    if not out:
+        sys.exit("SVG生成/渲染失败，换个主题或稍后重试")
+    print(f"✅ 卡片已生成：{out}")
+    if args.post:
+        bili = Bili(load_credential())
+        r = asyncio.run(bili.post_image_dynamic(
+            f"一图看懂 {args.topic} {cfg['safety']['aigc_label']}", [str(out)]))
+        print(f"✅ 图文动态已发布：{r}")
+
+
 def cmd_agent(args) -> None:
     """Agent模式测试：工具总线全链路（kb/web/news 自主调用），打印调用轨迹。"""
     from sprite.mind import Knowledge
@@ -673,6 +709,11 @@ def main() -> None:
     p_ws.add_argument("query", help="搜索词")
     p_ws.set_defaults(func=cmd_search)
 
+    p_card = sub.add_parser("card", help="知识卡片：主题→SVG设计→PNG（--post发图文动态）")
+    p_card.add_argument("topic", help="卡片主题，如 'KV Cache'")
+    p_card.add_argument("--post", action="store_true", help="生成后发布图文动态")
+    p_card.set_defaults(func=cmd_card)
+
     p_ag = sub.add_parser("agent", help="Agent模式测试：工具总线自主调用kb/搜索/资讯")
     p_ag.add_argument("query", help="问题")
     p_ag.set_defaults(func=cmd_agent)
@@ -712,7 +753,7 @@ def main() -> None:
     # 会发布内容或改写状态的命令加进程锁；QQ 用独立锁，绝不阻塞 B 站侧的 watch/social
     # 只读/分析类命令（抓取、解析、综述、问答、保洁）不抢锁，可随时与 watch 并行
     READONLY = ("status", "ask", "usage", "login", "paper", "daily-digest",
-                "distill", "ingest", "gossip", "housekeep", "search", "agent")
+                "distill", "ingest", "gossip", "housekeep", "search", "agent", "card")
     if args.cmd == "qq":
         acquire_lock("qq")
     elif args.cmd not in READONLY:
