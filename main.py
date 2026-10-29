@@ -319,6 +319,11 @@ async def cmd_qq(_args) -> None:
     if qq_cfg.get("vision_model"):
         vision_llm = LLM(llm_cfg["base_url"], llm_cfg["api_key"], qq_cfg["vision_model"],
                          temperature=0.3, thinking=False)
+    sc = cfg["llm_screen"]
+    screen_llm = LLM(sc.get("base_url") or llm_cfg["base_url"],
+                     sc.get("api_key") or llm_cfg["api_key"],
+                     sc.get("model", "glm-5.3-flash"),
+                     sc.get("temperature", 0.2), False, timeout=60)
     agent = QqAgent(client, llm, cfg["persona"], qq_cfg, kb=kb, vision_llm=vision_llm, screen_llm=screen_llm)
     client.on_message = agent.on_message
     print(f"智谱娘 QQ 模式：{qq_cfg['ws_url']}（Ctrl+C 退出，断线自动重连）")
