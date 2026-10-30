@@ -97,6 +97,13 @@ class Knowledge:
             score += (1 + math.log(tf)) * idf * (2.0 if in_title else 1.0)
         return score
 
+    def maybe_refresh(self):
+        """热更新：目录文件数变化时自动重建索引（新报告/综述无需重启即可被检索）。"""
+        n = len(list(self.report_dir.glob("*.md")))
+        if n != getattr(self, "_n_files", -1):
+            self.__init__(self.report_dir)
+            self._n_files = n
+
     def search(self, query: str, k: int = 3, exclude_file: str | None = None) -> list[dict]:
         self._refresh()
         q_tokens = set(_tokens(query))

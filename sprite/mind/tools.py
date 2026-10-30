@@ -37,6 +37,7 @@ def build_tools(kb=None):
 
     if kb is not None:
         def kb_search(q):
+            kb.maybe_refresh()
             hits = kb.search(q, k=3)
             if not hits:
                 return "(本地知识库没有相关内容)"
