@@ -38,6 +38,16 @@ def build_tools(kb=None):
     if kb is not None:
         def kb_search(q):
             kb.maybe_refresh()
+            # 日期直取：问题里带日期(如"10.29")时按文件名精确捞，绕开TF-IDF对日期的不敏感
+            import re as _re
+            picked = []
+            for d in set(_re.findall(r"1?[0-9][.\-/][03]?[0-9]", q)):
+                key = d.replace(".", "-").replace("/", "-")
+                for f in kb.report_dir.glob(f"*{key}*.md"):
+                    head = f.read_text(encoding="utf-8")[:600]
+                    picked.append(f"【{f.name}】{head}")
+            if picked:
+                return "\n\n".join(picked[:3])
             hits = kb.search(q, k=3)
             if not hits:
                 return "(本地知识库没有相关内容)"
